@@ -23,7 +23,7 @@ export default function LoginPage() {
   const router = useRouter();
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [email, setEmail] = useState('');
+  const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { manualLogin, isInitialized } = useGame();
@@ -35,7 +35,7 @@ export default function LoginPage() {
 
     try {
       const usersRef = collection(firestore, 'users');
-      const q = query(usersRef, where('email', '==', email.trim()), where('password', '==', password));
+      const q = query(usersRef, where('userId', '==', userId.trim()), where('password', '==', password));
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {
@@ -57,7 +57,7 @@ export default function LoginPage() {
     } catch (error: any) {
       let description = 'An unexpected error occurred. Please try again.';
       if (error.message === 'invalid-credential') {
-        description = 'Invalid email or password.';
+        description = 'Invalid User ID or password.';
       }
 
       toast({
@@ -95,14 +95,14 @@ export default function LoginPage() {
           <form onSubmit={handleLogin}>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="userId">User ID</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="student@example.com"
+                  id="userId"
+                  type="text"
+                  placeholder="Enter your User ID"
                   required
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  value={userId}
+                  onChange={e => setUserId(e.target.value)}
                   disabled={isLoading}
                 />
               </div>
