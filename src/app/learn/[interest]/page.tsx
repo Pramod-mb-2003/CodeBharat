@@ -59,8 +59,9 @@ export default function InterestPage() {
         {isGameOver ? (
           <Card className="text-center p-8 bg-destructive/10 border-destructive">
             <AlertTitle className="text-2xl font-bold mb-2">Game Over</AlertTitle>
-            <AlertDescription className="text-lg mb-6">You've run out of hearts!</AlertDescription>
-            <Button onClick={handleRestart}>Try Again</Button>
+            <AlertDescription className="text-lg mb-4">You've run out of hearts!</AlertDescription>
+            <AlertDescription className="text-base mb-6">A new heart will regenerate in 20 seconds. Or you can restart now with full hearts.</AlertDescription>
+            <Button onClick={handleRestart}>Try Again with Full Hearts</Button>
           </Card>
         ) : (
           <div className="relative grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8">
@@ -70,7 +71,7 @@ export default function InterestPage() {
             </div>
 
             {stages.map(stage => {
-              const isUnlocked = stage.id <= unlockedStage;
+              const isUnlocked = stage.id <= unlockedStage && !isGameOver;
               const isCompleted = stage.id < unlockedStage;
               const isCurrent = stage.id === unlockedStage;
 
@@ -82,8 +83,9 @@ export default function InterestPage() {
                   >
                     <Card className={`h-48 flex flex-col items-center justify-center text-center p-4 transition-all duration-300 transform 
                       ${isCompleted ? 'bg-green-500/10 border-green-500' : 'bg-card'}
-                      ${isCurrent ? 'border-primary border-2 shadow-primary/30 shadow-lg' : 'border-border'}
+                      ${isCurrent && !isGameOver ? 'border-primary border-2 shadow-primary/30 shadow-lg' : 'border-border'}
                       ${isUnlocked ? 'hover:-translate-y-2 hover:shadow-xl' : 'opacity-60 bg-muted'}
+                      ${isGameOver ? 'opacity-50 cursor-not-allowed' : ''}
                     `}>
                       <div className="mb-2">
                         {isCompleted ? (

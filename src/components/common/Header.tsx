@@ -2,14 +2,77 @@
 import Link from 'next/link';
 import { Rocket, Award, Heart } from 'lucide-react';
 import { useGame } from '@/context/GameContext';
+import { useEffect, useState } from 'react';
 
 type HeaderProps = {
   interest?: string;
 };
 
+const MAX_HEARTS = 3;
+const HEART_REGEN_TIME = 20 * 1000; // 20 seconds
+
+const HeartIcon = ({ filled, fillPercentage }: { filled: boolean, fillPercentage: number }) => {
+  const fillId = `fill-${Math.random()}`;
+  
+  if (filled) {
+    return <Heart className="w-6 h-6 text-red-500 fill-current" />;
+  }
+
+  return (
+    <div className="relative w-6 h-6">
+      <Heart className="w-6 h-6 text-muted-foreground/50" />
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
+        <div 
+          className="absolute top-0 right-0 h-full bg-red-500"
+          style={{ 
+            width: `${fillPercentage}%`,
+            transition: fillPercentage > 0 ? 'width 1s linear' : 'none',
+           }}
+        />
+      </div>
+      <Heart className="absolute top-0 left-0 w-6 h-6 text-red-500" style={{clipPath: `inset(0 ${100 - fillPercentage}% 0 0)`}} />
+    </div>
+  );
+};
+
+
 export function Header({ interest }: HeaderProps) {
   const { credits, progress } = useGame();
-  const hearts = interest && progress[interest] ? progress[interest].hearts : null;
+  const interestProgress = interest && progress[interest];
+  const hearts = interestProgress ? interestProgress.hearts : null;
+  const lastHeartLost = interestProgress ? interestProgress.lastHeartLost : null;
+
+  const [, setTimer] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setTimer(prev => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const heartsToRender = [];
+  if (hearts !== null) {
+      let fillPercentage = 0;
+      if (hearts < MAX_HEARTS && lastHeartLost) {
+          const elapsed = Date.now() - lastHeartLost;
+          const heartsToRegen = Math.floor(elapsed / HEART_REGEN_TIME);
+          if (hearts + heartsToRegen < MAX_HEARTS) {
+            const timeIntoCurrentRegen = elapsed % HEART_REGEN_TIME;
+            fillPercentage = (timeIntoCurrentRegen / HEART_REGEN_TIME) * 100;
+          }
+      }
+
+      for (let i = 0; i < MAX_HEARTS; i++) {
+          if (i < hearts) {
+              heartsToRender.push(<HeartIcon key={i} filled={true} fillPercentage={100} />);
+          } else if (i === hearts) {
+              heartsToRender.push(<HeartIcon key={i} filled={false} fillPercentage={fillPercentage} />);
+          } else {
+              heartsToRender.push(<HeartIcon key={i} filled={false} fillPercentage={0} />);
+          }
+      }
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -28,14 +91,7 @@ export function Header({ interest }: HeaderProps) {
           </div>
           {hearts !== null && (
             <div className="flex items-center gap-1">
-              {[...Array(3)].map((_, i) => (
-                <Heart
-                  key={i}
-                  className={`w-6 h-6 transition-all ${
-                    i < hearts ? 'text-red-500 fill-current' : 'text-muted-foreground/50'
-                  }`}
-                />
-              ))}
+              {heartsToRender}
               <span className="sr-only">{hearts} hearts remaining</span>
             </div>
           )}

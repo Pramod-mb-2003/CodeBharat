@@ -6,6 +6,7 @@ type Progress = {
   [interest: string]: {
     unlockedStage: number;
     hearts: number;
+    lastHeartLost: number | null;
   };
 };
 
@@ -24,6 +25,7 @@ type GameContextType = {
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
 const MAX_HEARTS = 3;
+const HEART_REGEN_TIME = 20 * 1000; // 20 seconds
 
 export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [credits, setCredits] = useState<number>(0);
@@ -66,6 +68,40 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       }
     }
   }, [progress, isInitialized]);
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      let needsUpdate = false;
+      const newProgress = { ...progress };
+
+      for (const interest in newProgress) {
+        const p = newProgress[interest];
+        if (p.hearts < MAX_HEARTS && p.lastHeartLost) {
+          const heartsToRegen = Math.floor((now - p.lastHeartLost) / HEART_REGEN_TIME);
+
+          if (heartsToRegen > 0) {
+            const newHearts = Math.min(MAX_HEARTS, p.hearts + heartsToRegen);
+            const timeConsumed = heartsToRegen * HEART_REGEN_TIME;
+
+            p.hearts = newHearts;
+            if (newHearts < MAX_HEARTS) {
+              p.lastHeartLost! += timeConsumed;
+            } else {
+              p.lastHeartLost = null;
+            }
+            needsUpdate = true;
+          }
+        }
+      }
+      if (needsUpdate) {
+        setProgress(newProgress);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [progress, isInitialized]);
+
 
   const initializeProgress = useCallback((interests: string[]) => {
     setProgress(prev => {
@@ -73,7 +109,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         let updated = false;
         interests.forEach(interest => {
             if (!newProgress[interest]) {
-                newProgress[interest] = { unlockedStage: 1, hearts: MAX_HEARTS };
+                newProgress[interest] = { unlockedStage: 1, hearts: MAX_HEARTS, lastHeartLost: null };
                 updated = true;
             }
         });
@@ -86,13 +122,19 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const loseHeart = (interest: string) => {
-    setProgress(prev => ({
-      ...prev,
-      [interest]: {
-        ...prev[interest],
-        hearts: Math.max(0, (prev[interest]?.hearts || MAX_HEARTS) - 1),
-      },
-    }));
+    setProgress(prev => {
+      const currentInterestProgress = prev[interest] || { hearts: MAX_HEARTS, unlockedStage: 1, lastHeartLost: null };
+      const newHearts = Math.max(0, currentInterestProgress.hearts - 1);
+      
+      return {
+        ...prev,
+        [interest]: {
+          ...currentInterestProgress,
+          hearts: newHearts,
+          lastHeartLost: newHearts < MAX_HEARTS ? (currentInterestProgress.lastHeartLost || Date.now()) : null,
+        },
+      }
+    });
   };
 
   const resetHearts = (interest: string) => {
@@ -101,6 +143,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       [interest]: {
         ...prev[interest],
         hearts: MAX_HEARTS,
+        lastHeartLost: null,
       },
     }));
   };

@@ -30,8 +30,18 @@ export default function StagePage() {
   const [showConfetti, setShowConfetti] = useState(false);
 
   useEffect(() => {
-    // Redirect if stage is locked
-    const unlockedStage = progress[interestKey]?.unlockedStage || 1;
+    const interestProgress = progress[interestKey];
+    if (!interestProgress) return;
+
+    const unlockedStage = interestProgress.unlockedStage || 1;
+    const currentHearts = interestProgress.hearts ?? 3;
+
+    if (currentHearts <= 0) {
+      toast({ title: "No Hearts Left!", description: "Wait for a heart to regenerate before continuing.", variant: 'destructive' });
+      router.push(`/learn/${interestKey}`);
+      return;
+    }
+    
     if (stageId > unlockedStage) {
       toast({ title: "Stage Locked!", description: "Complete previous stages to unlock this one.", variant: 'destructive' });
       router.push(`/learn/${interestKey}`);
