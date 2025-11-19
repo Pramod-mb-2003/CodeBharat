@@ -2,7 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useFirestore } from '@/firebase/provider';
-import { doc, setDoc, getDoc, DocumentData } from 'firebase/firestore';
+import { doc, setDoc, getDoc, DocumentData, collection } from 'firebase/firestore';
+import { learningContent } from '@/lib/learning-data';
 
 // A mock user type since we are not using Firebase Auth
 type MockUser = {
@@ -20,17 +21,22 @@ type Progress = {
 };
 
 type GameData = {
-    credits: number;
     progress: Progress;
     interests: string[];
 };
+
+type CreditsData = {
+    credits: number;
+}
 
 type GameContextType = {
   user: MockUser | null;
   credits: number;
   progress: Progress;
   interests: string[];
+  allInterestsComplete: boolean;
   initializeInterests: (interests: string[]) => void;
+  updateInterests: (newInterest: string) => Promise<void>;
   addCredits: (amount: number) => void;
   loseHeart: (interest: string) => void;
   resetHearts: (interest: string) => void;
@@ -53,13 +59,19 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [credits, setCredits] = useState<number>(0);
   const [progress, setProgress] = useState<Progress>({});
   const [interests, setInterests] = useState<string[]>([]);
+  const [allInterestsComplete, setAllInterestsComplete] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  const saveData = useCallback(async (data: Partial<GameData>) => {
+  const saveData = useCallback(async (gameData: Partial<GameData>, creditsData?: Partial<CreditsData>) => {
       if (!firestore || !user) return;
       try {
         const userDocRef = doc(firestore, 'users', user.uid);
-        await setDoc(userDocRef, data, { merge: true });
+        await setDoc(userDocRef, gameData, { merge: true });
+
+        if (creditsData) {
+            const creditsDocRef = doc(firestore, 'user_credits', user.uid);
+            await setDoc(creditsDocRef, creditsData, { merge: true });
+        }
       } catch (error) {
           console.error("Failed to save game data:", error);
       }
@@ -95,15 +107,24 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     const loadData = async () => {
         if (user && firestore) {
             const userDocRef = doc(firestore, 'users', user.uid);
-            const docSnap = await getDoc(userDocRef);
-            if (docSnap.exists()) {
-                const data = docSnap.data() as GameData;
-                setCredits(data.credits || 0);
+            const creditsDocRef = doc(firestore, 'user_credits', user.uid);
+            
+            const userDocSnap = await getDoc(userDocRef);
+            const creditsDocSnap = await getDoc(creditsDocRef);
+
+            if (userDocSnap.exists()) {
+                const data = userDocSnap.data() as GameData;
                 setProgress(data.progress || {});
                 setInterests(data.interests || []);
             } else {
-              // This case might happen if user session exists but DB is cleared
-              await saveData({ credits: 0, progress: {}, interests: [] });
+              await saveData({ progress: {}, interests: [] });
+            }
+
+            if(creditsDocSnap.exists()) {
+                const data = creditsDocSnap.data() as CreditsData;
+                setCredits(data.credits || 0);
+            } else {
+                await saveData({}, { credits: 0 });
             }
         } else {
             setCredits(0);
@@ -115,6 +136,20 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       loadData();
     }
   }, [user, firestore, isInitialized, saveData]);
+
+  useEffect(() => {
+    if (interests.length > 0 && Object.keys(progress).length > 0) {
+      const allComplete = interests.every(key => {
+        const interestProgress = progress[key];
+        const totalStages = learningContent[key]?.length || 0;
+        if (!interestProgress || totalStages === 0) return false;
+        return (interestProgress.unlockedStage || 1) > totalStages;
+      });
+      setAllInterestsComplete(allComplete);
+    } else {
+      setAllInterestsComplete(false);
+    }
+  }, [interests, progress]);
 
 
   useEffect(() => {
@@ -157,29 +192,37 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const initializeInterests = useCallback(async (newInterests: string[]) => {
     if (!user) return;
     const newProgress = { ...progress };
-    let updated = false;
     newInterests.forEach(interest => {
         if (!newProgress[interest]) {
             newProgress[interest] = { unlockedStage: 1, hearts: MAX_HEARTS, lastHeartLost: null };
-            updated = true;
         }
     });
 
-    if (updated) {
-        setProgress(newProgress);
-        setInterests(newInterests);
-        await saveData({ progress: newProgress, interests: newInterests });
-    } else if (JSON.stringify(interests) !== JSON.stringify(newInterests)) {
-        setInterests(newInterests);
-        await saveData({ interests: newInterests });
+    setProgress(newProgress);
+    setInterests(newInterests);
+    await saveData({ progress: newProgress, interests: newInterests });
+  }, [progress, saveData, user]);
+
+  const updateInterests = useCallback(async (newInterest: string) => {
+    if (!user || interests.includes(newInterest)) return;
+    
+    const newInterests = [...interests, newInterest];
+    const newProgress = { ...progress };
+    if (!newProgress[newInterest]) {
+        newProgress[newInterest] = { unlockedStage: 1, hearts: MAX_HEARTS, lastHeartLost: null };
     }
-  }, [progress, saveData, interests, user]);
+    
+    setInterests(newInterests);
+    setProgress(newProgress);
+    await saveData({ interests: newInterests, progress: newProgress });
+
+}, [user, interests, progress, saveData]);
 
   const addCredits = (amount: number) => {
     if (!user) return;
     const newCredits = credits + amount;
     setCredits(newCredits);
-    saveData({ credits: newCredits });
+    saveData({}, { credits: newCredits });
   };
 
   const loseHeart = (interest: string) => {
@@ -231,7 +274,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
     setCredits(0);
     setProgress(emptyProgress);
-    await saveData({ credits: 0, progress: emptyProgress });
+    await saveData({ progress: emptyProgress }, { credits: 0 });
     window.location.href = '/dashboard';
   };
 
@@ -242,7 +285,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         credits,
         progress,
         interests,
+        allInterestsComplete,
         initializeInterests,
+        updateInterests,
         addCredits,
         loseHeart,
         resetHearts,

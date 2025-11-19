@@ -17,7 +17,8 @@ function ConfirmInterestsContent() {
   const { toast } = useToast();
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [isReady, setIsReady] = useState(false);
-  const { user, isInitialized, initializeInterests, interests: existingInterests } = useGame();
+  const [isUpdateMode, setIsUpdateMode] = useState(false);
+  const { user, isInitialized, initializeInterests, interests: existingInterests, allInterestsComplete, updateInterests } = useGame();
 
   useEffect(() => {
     if (isInitialized && !user) {
@@ -27,29 +28,60 @@ function ConfirmInterestsContent() {
 
   useEffect(() => {
     if (!isInitialized) return;
-    if (existingInterests.length > 0) {
-      router.push('/dashboard');
-      return;
-    }
-    const interestsParam = searchParams.get('interests');
-    if (interestsParam) {
-      const initialInterests = interestsParam.split(',').filter(i => ALL_INTEREST_KEYS.includes(i));
-      setSelectedInterests(initialInterests.slice(0, 3));
+    
+    const updateParam = searchParams.get('update');
+    const isUpdating = updateParam === 'true';
+    setIsUpdateMode(isUpdating);
+
+    if (isUpdating) {
+        if (!allInterestsComplete) {
+             toast({
+                title: "Not so fast!",
+                description: "You must complete all your current interests before choosing new ones.",
+                variant: "destructive",
+            });
+            router.push('/dashboard');
+            return;
+        }
+        setSelectedInterests(existingInterests);
+    } else {
+        if (existingInterests.length > 0) {
+          router.push('/dashboard');
+          return;
+        }
+        const interestsParam = searchParams.get('interests');
+        if (interestsParam) {
+          const initialInterests = interestsParam.split(',').filter(i => ALL_INTEREST_KEYS.includes(i));
+          setSelectedInterests(initialInterests.slice(0, 3));
+        }
     }
     setIsReady(true);
-  }, [searchParams, existingInterests, router, isInitialized]);
+  }, [searchParams, existingInterests, router, isInitialized, allInterestsComplete, toast]);
 
-  const toggleInterest = (interest: string) => {
+  const toggleInterest = (interestKey: string) => {
+    if(isUpdateMode && existingInterests.includes(interestKey)){
+        toast({
+            title: "Already Mastered!",
+            description: "You cannot unselect an interest you have already completed.",
+            variant: "destructive",
+        });
+        return;
+    }
+
     setSelectedInterests(prev => {
-      if (prev.includes(interest)) {
-        return prev.filter(i => i !== interest);
+      if (prev.includes(interestKey)) {
+        return prev.filter(i => i !== interestKey);
       }
-      if (prev.length < 3) {
-        return [...prev, interest];
+      
+      const selectionLimit = isUpdateMode ? existingInterests.length + 1 : 3;
+
+      if (prev.length < selectionLimit) {
+        return [...prev, interestKey];
       }
+      
       toast({
         title: "Selection Limit Reached",
-        description: "You can select a maximum of 3 interests.",
+        description: isUpdateMode ? `You can only add one new interest at a time.` : "You can select a maximum of 3 interests.",
         variant: "destructive",
       });
       return prev;
@@ -57,15 +89,28 @@ function ConfirmInterestsContent() {
   };
 
   const handleConfirm = async () => {
-    if (selectedInterests.length < 2 || selectedInterests.length > 3) {
-      toast({
-        title: "Invalid Selection",
-        description: "Please select 2 or 3 interests to continue.",
-        variant: "destructive",
-      });
-      return;
+    if (isUpdateMode) {
+      const newInterest = selectedInterests.find(i => !existingInterests.includes(i));
+      if (!newInterest) {
+        toast({
+            title: "No New Interest Selected",
+            description: "Please select one new interest to add.",
+            variant: "destructive",
+        });
+        return;
+      }
+      await updateInterests(newInterest);
+    } else {
+      if (selectedInterests.length < 2 || selectedInterests.length > 3) {
+        toast({
+          title: "Invalid Selection",
+          description: "Please select 2 or 3 interests to continue.",
+          variant: "destructive",
+        });
+        return;
+      }
+      await initializeInterests(selectedInterests);
     }
-    await initializeInterests(selectedInterests);
     router.push(`/dashboard`);
   };
 
@@ -77,13 +122,35 @@ function ConfirmInterestsContent() {
     );
   }
 
+  const getButtonText = () => {
+    if (isUpdateMode) return 'Add New Interest';
+    return 'Confirm & Start Learning';
+  }
+
+  const getCardDescription = () => {
+    if (isUpdateMode) return 'You have mastered your previous interests! Select one new interest to continue your learning journey.';
+    return "Based on your quiz, we think you'll love these topics! Adjust your selection (2 or 3) and let's get started.";
+  }
+
+  const getAlertDescription = () => {
+      if(isUpdateMode) return "Select one new interest to add to your dashboard.";
+      return "Select 2 or 3 interests to build your personalized learning journey.";
+  }
+  
+  const getDisabledState = () => {
+    if(isUpdateMode) {
+        return selectedInterests.length !== existingInterests.length + 1;
+    }
+    return selectedInterests.length < 2 || selectedInterests.length > 3;
+  }
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-background p-4">
       <Card className="w-full max-w-4xl shadow-2xl border-primary/20">
         <CardHeader className="text-center">
-          <CardTitle className="text-3xl font-bold font-headline">Confirm Your Interests</CardTitle>
+          <CardTitle className="text-3xl font-bold font-headline">{isUpdateMode ? "Select Your Next Challenge" : "Confirm Your Interests"}</CardTitle>
           <CardDescription>
-            Based on your quiz, we think you'll love these topics! Adjust your selection (2 or 3) and let's get started.
+            {getCardDescription()}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -91,19 +158,21 @@ function ConfirmInterestsContent() {
             {ALL_INTEREST_KEYS.map(key => {
               const interest = INTERESTS[key];
               const isSelected = selectedInterests.includes(key);
+              const isCompleted = existingInterests.includes(key);
               return (
                 <button
                   key={key}
                   onClick={() => toggleInterest(key)}
+                  disabled={isCompleted && isUpdateMode}
                   className={cn(
                     'relative flex flex-col items-center justify-center p-6 rounded-lg border-2 text-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
-                    isSelected
-                      ? 'border-primary bg-primary/10 shadow-lg'
-                      : 'border-border hover:border-primary/50 hover:bg-primary/5'
+                    isSelected && !isCompleted && 'border-primary bg-primary/10 shadow-lg',
+                    isCompleted && 'border-green-500 bg-green-500/10 cursor-not-allowed opacity-70',
+                    !isSelected && !isCompleted && 'border-border hover:border-primary/50 hover:bg-primary/5'
                   )}
                 >
-                  {isSelected && (
-                    <CheckCircle className="absolute top-2 right-2 h-6 w-6 text-primary" />
+                  {(isSelected || isCompleted) && (
+                    <CheckCircle className={cn("absolute top-2 right-2 h-6 w-6", isCompleted ? "text-green-500" : "text-primary")} />
                   )}
                   <interest.Icon className="w-12 h-12 mb-2 text-primary" />
                   <span className="font-semibold text-lg text-foreground">{interest.name}</span>
@@ -115,7 +184,7 @@ function ConfirmInterestsContent() {
             <Info className="h-4 w-4" />
             <AlertTitle>Almost there!</AlertTitle>
             <AlertDescription>
-              Select 2 or 3 interests to build your personalized learning journey.
+                {getAlertDescription()}
             </AlertDescription>
           </Alert>
         </CardContent>
@@ -123,9 +192,9 @@ function ConfirmInterestsContent() {
           <Button
             size="lg"
             onClick={handleConfirm}
-            disabled={selectedInterests.length < 2 || selectedInterests.length > 3}
+            disabled={getDisabledState()}
           >
-            Confirm & Start Learning
+            {getButtonText()}
           </Button>
         </CardContent>
       </Card>

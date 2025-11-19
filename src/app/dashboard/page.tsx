@@ -7,14 +7,15 @@ import { useGame } from '@/context/GameContext';
 import { INTERESTS } from '@/lib/constants';
 import { Header } from '@/components/common/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowRight, BookCheck, LoaderCircle } from 'lucide-react';
+import { ArrowRight, BookCheck, LoaderCircle, PartyPopper } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { learningContent } from '@/lib/learning-data';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 function DashboardContent() {
   const router = useRouter();
-  const { interests, progress, isInitialized, resetGame, user } = useGame();
+  const { interests, progress, isInitialized, resetGame, user, allInterestsComplete } = useGame();
 
   useEffect(() => {
     if (isInitialized && !user) {
@@ -35,6 +36,12 @@ function DashboardContent() {
       </div>
     );
   }
+  
+  const handleSelectNewInterests = () => {
+    // Reset interests, which will allow selecting a new one.
+    // This flow will now be handled by confirm-interests page
+    router.push('/confirm-interests?update=true');
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -45,20 +52,35 @@ function DashboardContent() {
                 <h1 className="text-3xl sm:text-4xl font-bold font-headline text-foreground">Your Learning Dashboard</h1>
                 <p className="text-muted-foreground mt-2">Select an interest to start learning and earning credits!</p>
             </div>
-            <Button variant="outline" onClick={resetGame} className="mt-4 sm:mt-0">
-                Start Over
-            </Button>
+            <div className="flex gap-2 mt-4 sm:mt-0">
+                <Button variant="outline" onClick={resetGame}>
+                    Start Over
+                </Button>
+                 <Button onClick={handleSelectNewInterests} disabled={!allInterestsComplete}>
+                    Select New Interests
+                </Button>
+            </div>
         </div>
+        
+        {allInterestsComplete && (
+            <Alert className="mb-8 border-green-500 bg-green-500/10 text-green-500">
+                <PartyPopper className="h-4 w-4" />
+                <AlertTitle className="font-bold">Congratulations!</AlertTitle>
+                <AlertDescription>
+                    You've mastered all your selected interests. You can now select a new one to continue your journey!
+                </AlertDescription>
+            </Alert>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {interests.map(key => {
             const interest = INTERESTS[key];
             if (!interest) return null;
             const interestProgress = progress[key];
-            const totalStages = learningContent[key]?.length || 5;
-            const completedStages = (interestProgress?.unlockedStage || 1) - 1;
-            const progressPercentage = (completedStages / totalStages) * 100;
-            const isCompleted = completedStages >= totalStages;
+            const totalStages = learningContent[key]?.length || 0;
+            const completedStages = interestProgress ? (interestProgress.unlockedStage || 1) - 1 : 0;
+            const progressPercentage = totalStages > 0 ? (completedStages / totalStages) * 100 : 0;
+            const isCompleted = totalStages > 0 && completedStages >= totalStages;
 
             return (
               <Link href={`/learn/${key}`} key={key}>
