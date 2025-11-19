@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { submitQuiz } from '@/app/actions';
 import { quizQuestions, QuizQuestion } from '@/lib/quiz-data';
@@ -8,13 +8,21 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
-import { Rocket } from 'lucide-react';
+import { LoaderCircle, Rocket } from 'lucide-react';
+import { useUser } from '@/firebase';
 
 export default function QuizPage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+  const { user, isInitializing } = useUser();
+
+  useEffect(() => {
+    if (!isInitializing && !user) {
+      router.push('/');
+    }
+  }, [user, isInitializing, router]);
 
   const handleAnswerSelect = (questionId: string, category: string) => {
     setAnswers(prev => ({ ...prev, [questionId]: category }));
@@ -40,10 +48,17 @@ export default function QuizPage() {
     setIsSubmitting(true);
     const formData = new FormData(event.currentTarget);
     await submitQuiz(formData);
-    // The server action will handle the redirect, so we don't need to do anything here.
-    // A timeout is added just in case redirect takes time, to keep the loading state.
+    // The server action will handle the redirect.
     setTimeout(() => setIsSubmitting(false), 5000); 
   };
+
+  if (isInitializing) {
+    return (
+        <div className="flex min-h-screen w-full items-center justify-center">
+            <LoaderCircle className="h-16 w-16 animate-spin text-primary" />
+        </div>
+    );
+  }
   
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 sm:p-6 lg:p-8">

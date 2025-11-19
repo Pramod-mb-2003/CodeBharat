@@ -4,36 +4,42 @@ import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useGame } from '@/context/GameContext';
-import { INTERESTS, ALL_INTEREST_KEYS } from '@/lib/constants';
+import { INTERESTS } from '@/lib/constants';
 import { Header } from '@/components/common/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowRight, BookCheck, LoaderCircle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { learningContent } from '@/lib/learning-data';
 import { Button } from '@/components/ui/button';
+import { useUser } from '@/firebase';
 
 function DashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { initializeProgress, progress, isInitialized, resetGame } = useGame();
+  const { interests, progress, isInitialized, resetGame, initializeInterests } = useGame();
+  const { user, isInitializing: userIsInitializing } = useUser();
   
   const interestsParam = searchParams.get('interests');
-  const userInterests = interestsParam ? interestsParam.split(',').filter(i => ALL_INTEREST_KEYS.includes(i)) : [];
 
   useEffect(() => {
-    if (isInitialized) {
-      if (userInterests.length > 0) {
-        initializeProgress(userInterests);
-      } else if (Object.keys(progress).length === 0) {
-        // If no interests in URL and no progress, go back to start
-        router.push('/');
+    if (!userIsInitializing && !user) {
+      router.push('/');
+    }
+  }, [user, userIsInitializing, router]);
+
+  useEffect(() => {
+    if (isInitialized && user) {
+      const interestsFromUrl = interestsParam ? interestsParam.split(',') : [];
+      if (interestsFromUrl.length > 0) {
+        initializeInterests(interestsFromUrl);
+      } else if (interests.length === 0) {
+        router.push('/quiz');
       }
     }
-  }, [isInitialized, interestsParam, router, initializeProgress, userInterests, progress]);
+  }, [isInitialized, user, interestsParam, router, initializeInterests, interests]);
 
-  const displayInterests = userInterests.length > 0 ? userInterests : Object.keys(progress);
 
-  if (!isInitialized) {
+  if (!isInitialized || userIsInitializing) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center">
         <LoaderCircle className="h-16 w-16 animate-spin text-primary" />
@@ -41,7 +47,7 @@ function DashboardContent() {
     );
   }
 
-  if (displayInterests.length === 0) {
+  if (interests.length === 0) {
      return (
       <div className="flex flex-col items-center justify-center min-h-screen text-center p-4">
         <h2 className="text-2xl font-bold mb-4">No interests selected!</h2>
@@ -68,7 +74,7 @@ function DashboardContent() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {displayInterests.map(key => {
+          {interests.map(key => {
             const interest = INTERESTS[key];
             if (!interest) return null;
             const interestProgress = progress[key];

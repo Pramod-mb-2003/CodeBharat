@@ -10,14 +10,16 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { Check, X } from 'lucide-react';
+import { Check, LoaderCircle, X } from 'lucide-react';
 import Confetti from 'react-dom-confetti';
+import { useUser } from '@/firebase';
 
 export default function StagePage() {
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
-  const { addCredits, loseHeart, completeStage, progress } = useGame();
+  const { addCredits, loseHeart, completeStage, progress, isInitialized } = useGame();
+  const { user, isInitializing: userIsInitializing } = useUser();
 
   const interestKey = Array.isArray(params.interest) ? params.interest[0] : params.interest;
   const stageId = parseInt(Array.isArray(params.stage) ? params.stage[0] : params.stage, 10);
@@ -30,8 +32,19 @@ export default function StagePage() {
   const [showConfetti, setShowConfetti] = useState(false);
 
   useEffect(() => {
+    if (!userIsInitializing && !user) {
+      router.push('/');
+    }
+  }, [user, userIsInitializing, router]);
+
+  useEffect(() => {
+    if (!isInitialized) return;
+
     const interestProgress = progress[interestKey];
-    if (!interestProgress) return;
+    if (!interestProgress) {
+        if(isInitialized) router.push('/dashboard');
+        return;
+    };
 
     const unlockedStage = interestProgress.unlockedStage || 1;
     const currentHearts = interestProgress.hearts ?? 3;
@@ -46,7 +59,15 @@ export default function StagePage() {
       toast({ title: "Stage Locked!", description: "Complete previous stages to unlock this one.", variant: 'destructive' });
       router.push(`/learn/${interestKey}`);
     }
-  }, [interestKey, stageId, progress, router, toast]);
+  }, [interestKey, stageId, progress, router, toast, isInitialized]);
+
+  if (!isInitialized || userIsInitializing) {
+    return (
+        <div className="flex min-h-screen w-full items-center justify-center">
+            <LoaderCircle className="h-16 w-16 animate-spin text-primary" />
+        </div>
+    );
+  }
 
   if (!stage) {
     return <div>Stage not found.</div>;

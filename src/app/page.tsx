@@ -1,13 +1,54 @@
-import Link from 'next/link';
+'use client';
+import { FormEvent, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useAuth } from '@/firebase';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Rocket } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { InterestIcons } from '@/components/icons';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { Rocket, Sparkles } from 'lucide-react';
+import Link from 'next/link';
 
-export default function Home() {
+export default function LoginPage() {
+  const router = useRouter();
+  const auth = useAuth();
+  const { toast } = useToast();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleLogin = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!auth) return;
+    setIsLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      router.push('/dashboard');
+    } catch (error: any) {
+      toast({
+        title: 'Login Failed',
+        description:
+          error.code === 'auth/invalid-credential'
+            ? 'Invalid email or password.'
+            : 'An unexpected error occurred. Please try again.',
+        variant: 'destructive',
+      });
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
-      <header className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
+       <header className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex justify-between items-center">
           <Link href="/" className="flex items-center gap-2">
             <Rocket className="w-8 h-8 text-primary" />
@@ -17,36 +58,51 @@ export default function Home() {
           </Link>
         </div>
       </header>
-      <main className="flex-grow">
-        <section className="container mx-auto px-4 sm:px-6 lg:px-8 text-center py-20 md:py-32">
-          <div className="max-w-4xl mx-auto">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold tracking-tighter mb-4 text-foreground font-headline">
-              Ignite Your Curiosity. <span className="text-primary">Learn Your Way.</span>
-            </h1>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-              Discover your passions with our fun, gamified quiz and unlock a personalized learning journey designed just for you.
-            </p>
-            <Button asChild size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
-              <Link href="/quiz">
-                Start Your Adventure <Sparkles className="ml-2 h-5 w-5" />
-              </Link>
-            </Button>
-          </div>
-        </section>
-        <section className="container mx-auto px-4 sm:px-6 lg:px-8 pb-20">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 lg:gap-8">
-                {Object.entries(InterestIcons).map(([key, Icon]) => (
-                    <Card key={key} className="bg-card/80 backdrop-blur-sm border-2 border-primary/20 shadow-lg hover:shadow-primary/20 hover:-translate-y-1 transition-all duration-300">
-                        <CardContent className="flex flex-col items-center justify-center p-6">
-                            <Icon className="w-12 h-12 text-primary mb-2" />
-                            <p className="font-semibold text-foreground capitalize">{key}</p>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
-        </section>
+      <main className="flex-grow flex items-center justify-center p-4">
+        <Card className="w-full max-w-sm shadow-2xl">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl font-bold font-headline">
+              Student Login
+            </CardTitle>
+            <CardDescription>
+              Enter your credentials to start learning!
+            </CardDescription>
+          </CardHeader>
+          <form onSubmit={handleLogin}>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="student@example.com"
+                  required
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  required
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  disabled={isLoading}
+                />
+              </div>
+            </CardContent>
+            <CardFooter>
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? 'Logging In...' : 'Login'}
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
       </main>
-      <footer className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-muted-foreground">
+       <footer className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-muted-foreground">
         <p>&copy; {new Date().getFullYear()} Interest Ignition. All rights reserved.</p>
       </footer>
     </div>

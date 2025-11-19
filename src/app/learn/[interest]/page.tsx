@@ -5,10 +5,12 @@ import { useGame } from '@/context/GameContext';
 import { Header } from '@/components/common/Header';
 import { INTERESTS } from '@/lib/constants';
 import { learningContent } from '@/lib/learning-data';
-import { Lock, PlayCircle, CheckCircle, Star, ArrowLeft } from 'lucide-react';
+import { Lock, PlayCircle, CheckCircle, Star, ArrowLeft, LoaderCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useUser } from '@/firebase';
+import { useEffect } from 'react';
 
 export default function InterestPage() {
   const router = useRouter();
@@ -16,9 +18,18 @@ export default function InterestPage() {
   const interestKey = Array.isArray(params.interest) ? params.interest[0] : params.interest;
   
   const { progress, isInitialized, resetHearts } = useGame();
+  const { user, isInitializing: userIsInitializing } = useUser();
+
+  useEffect(() => {
+    if (!userIsInitializing && !user) {
+      router.push('/');
+    }
+  }, [user, userIsInitializing, router]);
   
-  if (!isInitialized) {
-    return <div className="flex min-h-screen w-full items-center justify-center">Loading...</div>;
+  if (!isInitialized || userIsInitializing) {
+    return <div className="flex min-h-screen w-full items-center justify-center">
+      <LoaderCircle className="h-16 w-16 animate-spin text-primary" />
+    </div>;
   }
   
   const interestDetails = INTERESTS[interestKey];
@@ -26,7 +37,10 @@ export default function InterestPage() {
   const interestProgress = progress[interestKey];
 
   if (!interestDetails || !stages) {
-    router.push('/dashboard');
+    // Redirect if the data is not consistent
+    if (isInitialized) {
+        router.push('/dashboard');
+    }
     return null;
   }
   

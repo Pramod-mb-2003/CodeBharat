@@ -1,8 +1,12 @@
 'use client';
 import Link from 'next/link';
-import { Rocket, Award, Heart } from 'lucide-react';
+import { Rocket, Award, Heart, LogOut } from 'lucide-react';
 import { useGame } from '@/context/GameContext';
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/firebase';
+import { signOut } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
+import { Button } from '../ui/button';
 
 type HeaderProps = {
   interest?: string;
@@ -12,35 +16,44 @@ const MAX_HEARTS = 3;
 const HEART_REGEN_TIME = 20 * 1000; // 20 seconds
 
 const HeartIcon = ({ filled, fillPercentage }: { filled: boolean, fillPercentage: number }) => {
-  if (filled) {
-    return <Heart className="w-6 h-6 text-red-500 fill-current" />;
-  }
-
-  return (
-    <div className="relative w-6 h-6">
-      {/* Background outlined heart */}
-      <Heart className="w-6 h-6 text-muted-foreground/50" />
-      {/* Foreground filling heart */}
-      <div
-        className="absolute bottom-0 left-0 w-full overflow-hidden"
-        style={{ height: `${fillPercentage}%` }}
-      >
-        <Heart
-          className="absolute bottom-0 left-0 w-6 h-6 text-red-500 fill-current"
-        />
+    const uniqueId = `heart-gradient-${React.useId()}`;
+    if (filled) {
+      return <Heart className="w-6 h-6 text-red-500 fill-current" />;
+    }
+  
+    return (
+      <div className="relative w-6 h-6">
+        <Heart className="w-6 h-6 text-muted-foreground/50" />
+        <div
+          className="absolute bottom-0 left-0 w-full h-full overflow-hidden"
+          style={{ height: `${fillPercentage}%` }}
+        >
+          <Heart
+            className="absolute bottom-0 left-0 w-6 h-6 text-red-500 fill-current"
+            style={{ clipPath: `inset(${100 - fillPercentage}% 0 0 0)` }}
+          />
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
 
 export function Header({ interest }: HeaderProps) {
   const { credits, progress } = useGame();
+  const auth = useAuth();
+  const router = useRouter();
   const interestProgress = interest && progress[interest];
   const hearts = interestProgress ? interestProgress.hearts : null;
   const lastHeartLost = interestProgress ? interestProgress.lastHeartLost : null;
 
   const [, setTimer] = useState(0);
+
+  const handleSignOut = async () => {
+    if (auth) {
+      await signOut(auth);
+      router.push('/');
+    }
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -58,6 +71,8 @@ export function Header({ interest }: HeaderProps) {
           if (hearts + heartsToRegen < MAX_HEARTS) {
             const timeIntoCurrentRegen = elapsed % HEART_REGEN_TIME;
             fillPercentage = (timeIntoCurrentRegen / HEART_REGEN_TIME) * 100;
+          } else {
+            fillPercentage = 100; // a heart has been regenerated
           }
       }
 
@@ -93,6 +108,10 @@ export function Header({ interest }: HeaderProps) {
               <span className="sr-only">{hearts} hearts remaining</span>
             </div>
           )}
+           <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sign Out">
+            <LogOut className="h-5 w-5" />
+            <span className="sr-only">Sign Out</span>
+          </Button>
         </div>
       </div>
     </header>

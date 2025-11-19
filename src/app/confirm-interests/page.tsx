@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { INTERESTS, ALL_INTEREST_KEYS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
-import { CheckCircle, Info } from 'lucide-react';
+import { CheckCircle, Info, LoaderCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useUser } from '@/firebase';
 
 
 function ConfirmInterestsContent() {
@@ -16,6 +17,13 @@ function ConfirmInterestsContent() {
   const { toast } = useToast();
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [isReady, setIsReady] = useState(false);
+  const { user, isInitializing } = useUser();
+
+  useEffect(() => {
+    if (!isInitializing && !user) {
+      router.push('/');
+    }
+  }, [user, isInitializing, router]);
 
   useEffect(() => {
     const interestsParam = searchParams.get('interests');
@@ -56,8 +64,12 @@ function ConfirmInterestsContent() {
     router.push(`/dashboard?interests=${interestsQuery}`);
   };
 
-  if (!isReady) {
-    return null; // Or a loading spinner
+  if (!isReady || isInitializing) {
+    return (
+        <div className="flex min-h-screen w-full items-center justify-center">
+            <LoaderCircle className="h-16 w-16 animate-spin text-primary" />
+        </div>
+    );
   }
 
   return (
@@ -119,7 +131,9 @@ function ConfirmInterestsContent() {
 
 export default function ConfirmInterestsPage() {
     return (
-      <Suspense fallback={<div>Loading...</div>}>
+      <Suspense fallback={<div className="flex min-h-screen w-full items-center justify-center">
+      <LoaderCircle className="h-16 w-16 animate-spin text-primary" />
+  </div>}>
         <ConfirmInterestsContent />
       </Suspense>
     );

@@ -1,0 +1,39 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Represents a user's profile information.",
+      "type": "object",
+      "properties": {
+        "credits": {
+          "type": "number",
+          "description": "The number of credits the user has."
+        },
+        "progress": {
+          "type": "object",
+          "description": "The user's progress in different interest categories."
+        },
+        "interests": {
+          "type": "array",
+          "description": "The user's selected interests.",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "auth": {
+    "providers": [
+      "email-password"
+    ]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/backend/entities/UserProfile"
+      },
+      "description": "Stores public information about a user."
+    }
+  }
+}

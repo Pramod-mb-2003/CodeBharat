@@ -1,6 +1,9 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { useUser, useFirestore } from '@/firebase';
+import { doc, setDoc, getDoc, DocumentData } from 'firebase/firestore';
+
 
 type Progress = {
   [interest: string]: {
@@ -10,10 +13,17 @@ type Progress = {
   };
 };
 
+type GameData = {
+    credits: number;
+    progress: Progress;
+    interests: string[];
+};
+
 type GameContextType = {
   credits: number;
   progress: Progress;
-  initializeProgress: (interests: string[]) => void;
+  interests: string[];
+  initializeInterests: (interests: string[]) => void;
   addCredits: (amount: number) => void;
   loseHeart: (interest: string) => void;
   resetHearts: (interest: string) => void;
@@ -28,52 +38,55 @@ const MAX_HEARTS = 3;
 const HEART_REGEN_TIME = 20 * 1000; // 20 seconds
 
 export const GameProvider = ({ children }: { children: ReactNode }) => {
+  const { user, isInitializing: userIsInitializing } = useUser();
+  const firestore = useFirestore();
+
   const [credits, setCredits] = useState<number>(0);
   const [progress, setProgress] = useState<Progress>({});
+  const [interests, setInterests] = useState<string[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  useEffect(() => {
-    try {
-      const savedCredits = localStorage.getItem('gameCredits');
-      const savedProgress = localStorage.getItem('gameProgress');
-      if (savedCredits) {
-        setCredits(JSON.parse(savedCredits));
+  const saveData = useCallback(async (data: Partial<GameData>) => {
+      if (!firestore || !user) return;
+      try {
+        const userDocRef = doc(firestore, 'users', user.uid);
+        await setDoc(userDocRef, data, { merge: true });
+      } catch (error) {
+          console.error("Failed to save game data:", error);
       }
-      if (savedProgress) {
-        setProgress(JSON.parse(savedProgress));
-      }
-    } catch (error) {
-      console.error('Failed to load game state from localStorage', error);
-    } finally {
-      setIsInitialized(true);
-    }
-  }, []);
+  }, [firestore, user]);
 
   useEffect(() => {
-    if (isInitialized) {
-      try {
-        localStorage.setItem('gameCredits', JSON.stringify(credits));
-      } catch (error) {
-        console.error('Failed to save credits to localStorage', error);
-      }
-    }
-  }, [credits, isInitialized]);
+    const loadData = async () => {
+        if (user && firestore) {
+            const userDocRef = doc(firestore, 'users', user.uid);
+            const docSnap = await getDoc(userDocRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data() as GameData;
+                setCredits(data.credits || 0);
+                setProgress(data.progress || {});
+                setInterests(data.interests || []);
+            }
+            setIsInitialized(true);
+        } else if (!user && !userIsInitializing) {
+            // Handle case where user is logged out
+            setIsInitialized(true);
+            setCredits(0);
+            setProgress({});
+            setInterests([]);
+        }
+    };
+    loadData();
+  }, [user, firestore, userIsInitializing]);
 
-  useEffect(() => {
-    if (isInitialized) {
-      try {
-        localStorage.setItem('gameProgress', JSON.stringify(progress));
-      } catch (error) {
-        console.error('Failed to save progress to localStorage', error);
-      }
-    }
-  }, [progress, isInitialized]);
-  
+
   useEffect(() => {
     const interval = setInterval(() => {
+      if (!isInitialized || !user) return;
+      
       const now = Date.now();
       let needsUpdate = false;
-      const newProgress = { ...progress };
+      const newProgress: Progress = JSON.parse(JSON.stringify(progress));
 
       for (const interest in newProgress) {
         const p = newProgress[interest];
@@ -96,77 +109,82 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       }
       if (needsUpdate) {
         setProgress(newProgress);
+        saveData({ progress: newProgress });
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [progress, isInitialized]);
+  }, [progress, isInitialized, user, saveData]);
 
 
-  const initializeProgress = useCallback((interests: string[]) => {
-    setProgress(prev => {
-        const newProgress = { ...prev };
-        let updated = false;
-        interests.forEach(interest => {
-            if (!newProgress[interest]) {
-                newProgress[interest] = { unlockedStage: 1, hearts: MAX_HEARTS, lastHeartLost: null };
-                updated = true;
-            }
-        });
-        return updated ? newProgress : prev;
+  const initializeInterests = useCallback(async (newInterests: string[]) => {
+    const newProgress = { ...progress };
+    let updated = false;
+    newInterests.forEach(interest => {
+        if (!newProgress[interest]) {
+            newProgress[interest] = { unlockedStage: 1, hearts: MAX_HEARTS, lastHeartLost: null };
+            updated = true;
+        }
     });
-  }, []);
+
+    if (updated) {
+        setProgress(newProgress);
+        setInterests(newInterests);
+        await saveData({ progress: newProgress, interests: newInterests });
+    } else {
+        setInterests(newInterests);
+        await saveData({ interests: newInterests });
+    }
+  }, [progress, saveData]);
 
   const addCredits = (amount: number) => {
-    setCredits(prev => prev + amount);
+    const newCredits = credits + amount;
+    setCredits(newCredits);
+    saveData({ credits: newCredits });
   };
 
   const loseHeart = (interest: string) => {
-    setProgress(prev => {
-      const currentInterestProgress = prev[interest] || { hearts: MAX_HEARTS, unlockedStage: 1, lastHeartLost: null };
-      const newHearts = Math.max(0, currentInterestProgress.hearts - 1);
-      
-      return {
-        ...prev,
-        [interest]: {
-          ...currentInterestProgress,
-          hearts: newHearts,
-          lastHeartLost: newHearts < MAX_HEARTS ? (currentInterestProgress.lastHeartLost || Date.now()) : null,
-        },
-      }
-    });
+    const newProgress = { ...progress };
+    const currentInterestProgress = newProgress[interest] || { hearts: MAX_HEARTS, unlockedStage: 1, lastHeartLost: null };
+    const newHearts = Math.max(0, currentInterestProgress.hearts - 1);
+    
+    newProgress[interest] = {
+        ...currentInterestProgress,
+        hearts: newHearts,
+        lastHeartLost: newHearts < MAX_HEARTS ? (currentInterestProgress.lastHeartLost || Date.now()) : null,
+    };
+    setProgress(newProgress);
+    saveData({ progress: newProgress });
   };
 
   const resetHearts = (interest: string) => {
-    setProgress(prev => ({
-      ...prev,
-      [interest]: {
-        ...prev[interest],
+    const newProgress = { ...progress };
+    newProgress[interest] = {
+        ...newProgress[interest],
         hearts: MAX_HEARTS,
         lastHeartLost: null,
-      },
-    }));
+    };
+    setProgress(newProgress);
+    saveData({ progress: newProgress });
   };
 
   const completeStage = (interest: string, stageId: number) => {
-    setProgress(prev => ({
-      ...prev,
-      [interest]: {
-        ...prev[interest],
-        unlockedStage: Math.max(prev[interest]?.unlockedStage || 1, stageId + 1),
-      },
-    }));
+    const newProgress = { ...progress };
+    const interestProgress = newProgress[interest] || { unlockedStage: 1, hearts: MAX_HEARTS, lastHeartLost: null };
+    
+    newProgress[interest] = {
+      ...interestProgress,
+      unlockedStage: Math.max(interestProgress.unlockedStage, stageId + 1),
+    };
+    setProgress(newProgress);
+    saveData({ progress: newProgress });
   };
 
-  const resetGame = () => {
+  const resetGame = async () => {
     setCredits(0);
     setProgress({});
-    try {
-      localStorage.removeItem('gameCredits');
-      localStorage.removeItem('gameProgress');
-    } catch (error) {
-      console.error('Failed to reset game state in localStorage', error);
-    }
+    setInterests([]);
+    await saveData({ credits: 0, progress: {}, interests: [] });
   };
 
   return (
@@ -174,13 +192,14 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       value={{
         credits,
         progress,
-        initializeProgress,
+        interests,
+        initializeInterests,
         addCredits,
         loseHeart,
         resetHearts,
         completeStage,
         resetGame,
-        isInitialized
+        isInitialized: isInitialized && !userIsInitializing
       }}
     >
       {children}
