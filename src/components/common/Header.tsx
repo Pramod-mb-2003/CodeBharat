@@ -12,25 +12,23 @@ const MAX_HEARTS = 3;
 const HEART_REGEN_TIME = 20 * 1000; // 20 seconds
 
 const HeartIcon = ({ filled, fillPercentage }: { filled: boolean, fillPercentage: number }) => {
-  const fillId = `fill-${Math.random()}`;
-  
   if (filled) {
     return <Heart className="w-6 h-6 text-red-500 fill-current" />;
   }
 
   return (
     <div className="relative w-6 h-6">
+      {/* Background outlined heart */}
       <Heart className="w-6 h-6 text-muted-foreground/50" />
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden">
-        <div 
-          className="absolute top-0 right-0 h-full bg-red-500"
-          style={{ 
-            width: `${fillPercentage}%`,
-            transition: fillPercentage > 0 ? 'width 1s linear' : 'none',
-           }}
+      {/* Foreground filling heart */}
+      <div
+        className="absolute bottom-0 left-0 w-full overflow-hidden"
+        style={{ height: `${fillPercentage}%` }}
+      >
+        <Heart
+          className="absolute bottom-0 left-0 w-6 h-6 text-red-500 fill-current"
         />
       </div>
-      <Heart className="absolute top-0 left-0 w-6 h-6 text-red-500" style={{clipPath: `inset(0 ${100 - fillPercentage}% 0 0)`}} />
     </div>
   );
 };
