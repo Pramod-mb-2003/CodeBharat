@@ -11,7 +11,7 @@ import { ArrowRight, BookCheck, LoaderCircle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { learningContent } from '@/lib/learning-data';
 import { Button } from '@/components/ui/button';
-import { useUser } from '@/firebase';
+import { useUser } from '@/firebase/auth/use-user';
 
 function DashboardContent() {
   const router = useRouter();

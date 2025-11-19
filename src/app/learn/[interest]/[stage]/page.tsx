@@ -12,7 +12,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Check, LoaderCircle, X } from 'lucide-react';
 import Confetti from 'react-dom-confetti';
-import { useUser } from '@/firebase';
+import { useUser } from '@/firebase/auth/use-user';
 
 export default function StagePage() {
   const router = useRouter();

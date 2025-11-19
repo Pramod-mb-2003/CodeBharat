@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Rocket, Award, Heart, LogOut } from 'lucide-react';
 import { useGame } from '@/context/GameContext';
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/firebase';
+import { useAuth } from '@/firebase/provider';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
@@ -16,7 +16,6 @@ const MAX_HEARTS = 3;
 const HEART_REGEN_TIME = 20 * 1000; // 20 seconds
 
 const HeartIcon = ({ filled, fillPercentage }: { filled: boolean, fillPercentage: number }) => {
-    const uniqueId = `heart-gradient-${React.useId()}`;
     if (filled) {
       return <Heart className="w-6 h-6 text-red-500 fill-current" />;
     }
@@ -25,12 +24,12 @@ const HeartIcon = ({ filled, fillPercentage }: { filled: boolean, fillPercentage
       <div className="relative w-6 h-6">
         <Heart className="w-6 h-6 text-muted-foreground/50" />
         <div
-          className="absolute bottom-0 left-0 w-full h-full overflow-hidden"
+          className="absolute bottom-0 left-0 w-full overflow-hidden"
           style={{ height: `${fillPercentage}%` }}
         >
           <Heart
             className="absolute bottom-0 left-0 w-6 h-6 text-red-500 fill-current"
-            style={{ clipPath: `inset(${100 - fillPercentage}% 0 0 0)` }}
+            style={{ clipPath: 'inset(0 0 0 0)' }}
           />
         </div>
       </div>

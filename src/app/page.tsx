@@ -2,7 +2,7 @@
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword } from 'firebase/auth';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase/provider';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -15,31 +15,57 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Rocket, Sparkles } from 'lucide-react';
+import { Rocket } from 'lucide-react';
 import Link from 'next/link';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 
 export default function LoginPage() {
   const router = useRouter();
   const auth = useAuth();
+  const firestore = useFirestore();
   const { toast } = useToast();
-  const [email, setEmail] = useState('');
+  const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
-    if (!auth) return;
+    if (!auth || !firestore) return;
     setIsLoading(true);
+
     try {
+      // 1. Find user document by userId
+      const usersRef = collection(firestore, 'users');
+      const q = query(usersRef, where('userId', '==', userId.trim()));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        throw new Error('invalid-credential');
+      }
+
+      // 2. Get email from the user document
+      const userDoc = querySnapshot.docs[0];
+      const userData = userDoc.data();
+      const email = userData.email;
+
+      if (!email) {
+        throw new Error('user-data-corrupt');
+      }
+
+      // 3. Sign in with email and password
       await signInWithEmailAndPassword(auth, email, password);
       router.push('/dashboard');
     } catch (error: any) {
+      let description = 'An unexpected error occurred. Please try again.';
+      if (error.message === 'invalid-credential' || error.code === 'auth/invalid-credential') {
+        description = 'Invalid User ID or password.';
+      } else if (error.message === 'user-data-corrupt') {
+        description = 'User account is not configured correctly. Please contact an administrator.';
+      }
+
       toast({
         title: 'Login Failed',
-        description:
-          error.code === 'auth/invalid-credential'
-            ? 'Invalid email or password.'
-            : 'An unexpected error occurred. Please try again.',
+        description: description,
         variant: 'destructive',
       });
       setIsLoading(false);
@@ -71,14 +97,14 @@ export default function LoginPage() {
           <form onSubmit={handleLogin}>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="userId">User ID</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="student@example.com"
+                  id="userId"
+                  type="text"
+                  placeholder="your-user-id"
                   required
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
+                  value={userId}
+                  onChange={e => setUserId(e.target.value)}
                   disabled={isLoading}
                 />
               </div>

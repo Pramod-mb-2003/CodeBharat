@@ -1,8 +1,9 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { useUser, useFirestore } from '@/firebase';
-import { doc, setDoc, getDoc, DocumentData, serverTimestamp } from 'firebase/firestore';
+import { useUser } from '@/firebase/auth/use-user';
+import { useFirestore } from '@/firebase/provider';
+import { doc, setDoc, getDoc, DocumentData } from 'firebase/firestore';
 
 
 type Progress = {

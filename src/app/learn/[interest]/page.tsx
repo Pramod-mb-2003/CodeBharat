@@ -9,7 +9,7 @@ import { Lock, PlayCircle, CheckCircle, Star, ArrowLeft, LoaderCircle } from 'lu
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useUser } from '@/firebase';
+import { useUser } from '@/firebase/auth/use-user';
 import { useEffect } from 'react';
 
 export default function InterestPage() {

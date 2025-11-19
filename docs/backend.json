@@ -5,6 +5,15 @@
       "description": "Represents a user's profile information.",
       "type": "object",
       "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The unique user ID for the student."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address, used for authentication."
+        },
         "credits": {
           "type": "number",
           "description": "The number of credits the user has."
@@ -20,7 +29,8 @@
             "type": "string"
           }
         }
-      }
+      },
+      "required": ["userId", "email"]
     }
   },
   "auth": {

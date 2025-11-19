@@ -2,14 +2,14 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { submitQuiz } from '@/app/actions';
-import { quizQuestions, QuizQuestion } from '@/lib/quiz-data';
+import { quizQuestions } from '@/lib/quiz-data';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { LoaderCircle, Rocket } from 'lucide-react';
-import { useUser } from '@/firebase';
+import { useUser } from '@/firebase/auth/use-user';
 
 export default function QuizPage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);

@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { CheckCircle, Info, LoaderCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useUser } from '@/firebase';
+import { useUser } from '@/firebase/auth/use-user';
 import { useGame } from '@/context/GameContext';
 
 
