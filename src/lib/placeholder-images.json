@@ -1,3 +1,46 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "sports",
+      "description": "An action shot of a person playing sports.",
+      "imageUrl": "https://images.unsplash.com/photo-1561862755-10ad7b1e9b0c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxzcG9ydHMlMjBhY3Rpb258ZW58MHx8fHwxNzYzNTIzNzQ1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "sports action"
+    },
+    {
+      "id": "science",
+      "description": "A scientific laboratory with beakers and test tubes.",
+      "imageUrl": "https://images.unsplash.com/photo-1562411403-f583472c8e87?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHxzY2llbmNlJTIwbGFib3JhdG9yeXxlbnwwfHx8fDE3NjM1MDU1NDR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "science laboratory"
+    },
+    {
+      "id": "english",
+      "description": "A stack of classic books on a wooden table.",
+      "imageUrl": "https://images.unsplash.com/photo-1683871268982-a19153dbb35d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxib29rcyUyMGxpYnJhcnl8ZW58MHx8fHwxNzYzNTYxMTczfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "books library"
+    },
+    {
+      "id": "creativity",
+      "description": "Colorful paints and brushes on a palette.",
+      "imageUrl": "https://images.unsplash.com/photo-1658303135227-fcdfb0dab396?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxhcnQlMjBzdXBwbGllc3xlbnwwfHx8fDE3NjM1ODk5MTh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "art supplies"
+    },
+    {
+      "id": "social",
+      "description": "A map of the world with pins in different locations.",
+      "imageUrl": "https://images.unsplash.com/photo-1566935843973-aed0ddcb0ecc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw2fHx3b3JsZCUyMG1hcHxlbnwwfHx8fDE3NjM1MTg1NzZ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "world map"
+    },
+    {
+      "id": "math",
+      "description": "Mathematical equations written on a chalkboard.",
+      "imageUrl": "https://images.unsplash.com/photo-1758685848697-b5fb55f87407?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8bWF0aCUyMGNoYWxrYm9hcmR8ZW58MHx8fHwxNzYzNTU4ODk0fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "math chalkboard"
+    },
+    {
+      "id": "hero",
+      "description": "An abstract image representing learning and ideas.",
+      "imageUrl": "https://images.unsplash.com/photo-1622487556702-17ce31208ea9?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMGxlYXJuaW5nfGVufDB8fHx8MTc2MzUyMDA5Mnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "abstract learning"
+    }
+  ]
 }
