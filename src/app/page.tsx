@@ -45,14 +45,20 @@ export default function LoginPage() {
       const userDoc = querySnapshot.docs[0];
       const userData = userDoc.data();
       
-      // Manually set user data in context instead of Firebase Auth
-      manualLogin({
+      const loggedInUser = {
         uid: userDoc.id,
         email: userData.email,
         ...userData,
-      });
+      };
 
-      router.push('/dashboard');
+      // Manually set user data in context instead of Firebase Auth
+      manualLogin(loggedInUser);
+
+      if (userData.interests && userData.interests.length > 0) {
+        router.push('/dashboard');
+      } else {
+        router.push('/quiz');
+      }
 
     } catch (error: any) {
       let description = 'An unexpected error occurred. Please try again.';

@@ -29,7 +29,7 @@ function DashboardContent() {
     }
   }, [isInitialized, user, interests, router]);
 
-  if (!isInitialized || (isInitialized && !user) || (user && interests.length === 0)) {
+  if (!isInitialized || !user) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center">
         <LoaderCircle className="h-16 w-16 animate-spin text-primary" />
@@ -37,6 +37,14 @@ function DashboardContent() {
     );
   }
   
+  if (isInitialized && user && interests.length === 0) {
+    return (
+      <div className="flex min-h-screen w-full items-center justify-center">
+        <LoaderCircle className="h-16 w-16 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   const handleSelectNewInterests = () => {
     // Reset interests, which will allow selecting a new one.
     // This flow will now be handled by confirm-interests page
