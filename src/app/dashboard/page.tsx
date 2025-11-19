@@ -46,7 +46,6 @@ function DashboardContent() {
   }
 
   const handleSelectNewInterests = () => {
-    // Reset interests, which will allow selecting a new one.
     // This flow will now be handled by confirm-interests page
     router.push('/confirm-interests?update=true');
   };

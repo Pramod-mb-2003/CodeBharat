@@ -35,7 +35,7 @@ type GameContextType = {
   progress: Progress;
   interests: string[];
   allInterestsComplete: boolean;
-  initializeInterests: (interests: string[]) => void;
+  initializeInterests: (interests: string[]) => Promise<void>;
   updateInterests: (newInterest: string) => Promise<void>;
   addCredits: (amount: number) => void;
   loseHeart: (interest: string) => void;
@@ -198,8 +198,8 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         }
     });
 
-    setProgress(newProgress);
     setInterests(newInterests);
+    setProgress(newProgress);
     await saveData({ progress: newProgress, interests: newInterests });
   }, [progress, saveData, user]);
 
