@@ -9,7 +9,6 @@ import { Lock, PlayCircle, CheckCircle, Star, ArrowLeft, LoaderCircle } from 'lu
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useUser } from '@/firebase/auth/use-user';
 import { useEffect } from 'react';
 
 export default function InterestPage() {
@@ -17,16 +16,15 @@ export default function InterestPage() {
   const params = useParams();
   const interestKey = Array.isArray(params.interest) ? params.interest[0] : params.interest;
   
-  const { progress, isInitialized, resetHearts } = useGame();
-  const { user, isInitializing: userIsInitializing } = useUser();
+  const { progress, isInitialized, resetHearts, user } = useGame();
 
   useEffect(() => {
-    if (!userIsInitializing && !user) {
+    if (isInitialized && !user) {
       router.push('/');
     }
-  }, [user, userIsInitializing, router]);
+  }, [user, isInitialized, router]);
   
-  if (!isInitialized || userIsInitializing) {
+  if (!isInitialized || !user) {
     return <div className="flex min-h-screen w-full items-center justify-center">
       <LoaderCircle className="h-16 w-16 animate-spin text-primary" />
     </div>;
@@ -37,7 +35,6 @@ export default function InterestPage() {
   const interestProgress = progress[interestKey];
 
   if (!interestDetails || !stages) {
-    // Redirect if the data is not consistent
     if (isInitialized) {
         router.push('/dashboard');
     }

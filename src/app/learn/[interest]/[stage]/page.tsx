@@ -12,14 +12,12 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Check, LoaderCircle, X } from 'lucide-react';
 import Confetti from 'react-dom-confetti';
-import { useUser } from '@/firebase/auth/use-user';
 
 export default function StagePage() {
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
-  const { addCredits, loseHeart, completeStage, progress, isInitialized } = useGame();
-  const { user, isInitializing: userIsInitializing } = useUser();
+  const { addCredits, loseHeart, completeStage, progress, isInitialized, user } = useGame();
 
   const interestKey = Array.isArray(params.interest) ? params.interest[0] : params.interest;
   const stageId = parseInt(Array.isArray(params.stage) ? params.stage[0] : params.stage, 10);
@@ -32,10 +30,10 @@ export default function StagePage() {
   const [showConfetti, setShowConfetti] = useState(false);
 
   useEffect(() => {
-    if (!userIsInitializing && !user) {
+    if (isInitialized && !user) {
       router.push('/');
     }
-  }, [user, userIsInitializing, router]);
+  }, [user, isInitialized, router]);
 
   useEffect(() => {
     if (!isInitialized) return;
@@ -61,7 +59,7 @@ export default function StagePage() {
     }
   }, [interestKey, stageId, progress, router, toast, isInitialized]);
 
-  if (!isInitialized || userIsInitializing) {
+  if (!isInitialized || !user) {
     return (
         <div className="flex min-h-screen w-full items-center justify-center">
             <LoaderCircle className="h-16 w-16 animate-spin text-primary" />

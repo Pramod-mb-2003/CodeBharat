@@ -14,6 +14,10 @@
           "format": "email",
           "description": "The user's email address, used for authentication."
         },
+        "password": {
+          "type": "string",
+          "description": "The user's password. Note: Storing plain text passwords is a security risk."
+        },
         "credits": {
           "type": "number",
           "description": "The number of credits the user has."
@@ -30,7 +34,7 @@
           }
         }
       },
-      "required": ["userId", "email"]
+      "required": ["userId", "email", "password"]
     }
   },
   "auth": {

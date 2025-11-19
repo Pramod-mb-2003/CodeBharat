@@ -9,20 +9,21 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { LoaderCircle, Rocket } from 'lucide-react';
-import { useUser } from '@/firebase/auth/use-user';
+import { useGame } from '@/context/GameContext';
+
 
 export default function QuizPage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
-  const { user, isInitializing } = useUser();
+  const { user, isInitialized } = useGame();
 
   useEffect(() => {
-    if (!isInitializing && !user) {
+    if (isInitialized && !user) {
       router.push('/');
     }
-  }, [user, isInitializing, router]);
+  }, [user, isInitialized, router]);
 
   const handleAnswerSelect = (questionId: string, category: string) => {
     setAnswers(prev => ({ ...prev, [questionId]: category }));
@@ -52,7 +53,7 @@ export default function QuizPage() {
     setTimeout(() => setIsSubmitting(false), 5000); 
   };
 
-  if (isInitializing) {
+  if (!isInitialized) {
     return (
         <div className="flex min-h-screen w-full items-center justify-center">
             <LoaderCircle className="h-16 w-16 animate-spin text-primary" />

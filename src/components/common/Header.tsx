@@ -3,9 +3,6 @@ import Link from 'next/link';
 import { Rocket, Award, Heart, LogOut } from 'lucide-react';
 import { useGame } from '@/context/GameContext';
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/firebase/provider';
-import { signOut } from 'firebase/auth';
-import { useRouter } from 'next/navigation';
 import { Button } from '../ui/button';
 
 type HeaderProps = {
@@ -38,20 +35,15 @@ const HeartIcon = ({ filled, fillPercentage }: { filled: boolean, fillPercentage
 
 
 export function Header({ interest }: HeaderProps) {
-  const { credits, progress } = useGame();
-  const auth = useAuth();
-  const router = useRouter();
+  const { credits, progress, manualLogout } = useGame();
   const interestProgress = interest && progress[interest];
   const hearts = interestProgress ? interestProgress.hearts : null;
   const lastHeartLost = interestProgress ? interestProgress.lastHeartLost : null;
 
   const [, setTimer] = useState(0);
 
-  const handleSignOut = async () => {
-    if (auth) {
-      await signOut(auth);
-      router.push('/');
-    }
+  const handleSignOut = () => {
+    manualLogout();
   };
 
   useEffect(() => {

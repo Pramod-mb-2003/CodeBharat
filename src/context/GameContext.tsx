@@ -1,10 +1,15 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { useUser } from '@/firebase/auth/use-user';
 import { useFirestore } from '@/firebase/provider';
 import { doc, setDoc, getDoc, DocumentData } from 'firebase/firestore';
 
+// A mock user type since we are not using Firebase Auth
+type MockUser = {
+  uid: string;
+  email: string | null;
+  [key: string]: any;
+};
 
 type Progress = {
   [interest: string]: {
@@ -21,6 +26,7 @@ type GameData = {
 };
 
 type GameContextType = {
+  user: MockUser | null;
   credits: number;
   progress: Progress;
   interests: string[];
@@ -31,6 +37,8 @@ type GameContextType = {
   completeStage: (interest: string, stageId: number) => void;
   resetGame: () => void;
   isInitialized: boolean;
+  manualLogin: (user: MockUser) => void;
+  manualLogout: () => void;
 };
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -39,8 +47,8 @@ const MAX_HEARTS = 3;
 const HEART_REGEN_TIME = 20 * 1000; // 20 seconds
 
 export const GameProvider = ({ children }: { children: ReactNode }) => {
-  const { user, isInitializing: userIsInitializing } = useUser();
   const firestore = useFirestore();
+  const [user, setUser] = useState<MockUser | null>(null);
 
   const [credits, setCredits] = useState<number>(0);
   const [progress, setProgress] = useState<Progress>({});
@@ -57,6 +65,32 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       }
   }, [firestore, user]);
 
+  const manualLogin = (userData: MockUser) => {
+    setUser(userData);
+    sessionStorage.setItem('user', JSON.stringify(userData));
+  };
+  
+  const manualLogout = () => {
+    setUser(null);
+    sessionStorage.removeItem('user');
+    setCredits(0);
+    setProgress({});
+    setInterests([]);
+    window.location.href = '/';
+  };
+
+  useEffect(() => {
+    try {
+      const storedUser = sessionStorage.getItem('user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    } catch (e) {
+      console.error("Could not parse user from session storage", e);
+    }
+    setIsInitialized(true);
+  }, []);
+
   useEffect(() => {
     const loadData = async () => {
         if (user && firestore) {
@@ -68,20 +102,19 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
                 setProgress(data.progress || {});
                 setInterests(data.interests || []);
             } else {
-              // Create initial document for new user
+              // This case might happen if user session exists but DB is cleared
               await saveData({ credits: 0, progress: {}, interests: [] });
             }
-            setIsInitialized(true);
-        } else if (!user && !userIsInitializing) {
-            // Handle case where user is logged out
-            setIsInitialized(true);
+        } else {
             setCredits(0);
             setProgress({});
             setInterests([]);
         }
     };
-    loadData();
-  }, [user, firestore, userIsInitializing, saveData]);
+    if (isInitialized) {
+      loadData();
+    }
+  }, [user, firestore, isInitialized, saveData]);
 
 
   useEffect(() => {
@@ -122,6 +155,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
 
   const initializeInterests = useCallback(async (newInterests: string[]) => {
+    if (!user) return;
     const newProgress = { ...progress };
     let updated = false;
     newInterests.forEach(interest => {
@@ -139,15 +173,17 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         setInterests(newInterests);
         await saveData({ interests: newInterests });
     }
-  }, [progress, saveData, interests]);
+  }, [progress, saveData, interests, user]);
 
   const addCredits = (amount: number) => {
+    if (!user) return;
     const newCredits = credits + amount;
     setCredits(newCredits);
     saveData({ credits: newCredits });
   };
 
   const loseHeart = (interest: string) => {
+    if (!user) return;
     const newProgress = { ...progress };
     const currentInterestProgress = newProgress[interest] || { hearts: MAX_HEARTS, unlockedStage: 1, lastHeartLost: null };
     const newHearts = Math.max(0, currentInterestProgress.hearts - 1);
@@ -162,6 +198,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const resetHearts = (interest: string) => {
+    if (!user) return;
     const newProgress = { ...progress };
     newProgress[interest] = {
         ...newProgress[interest],
@@ -173,6 +210,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const completeStage = (interest: string, stageId: number) => {
+    if (!user) return;
     const newProgress = { ...progress };
     const interestProgress = newProgress[interest] || { unlockedStage: 1, hearts: MAX_HEARTS, lastHeartLost: null };
     
@@ -185,6 +223,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const resetGame = async () => {
+    if (!user) return;
     const emptyProgress: Progress = {};
     interests.forEach(interest => {
       emptyProgress[interest] = { unlockedStage: 1, hearts: MAX_HEARTS, lastHeartLost: null };
@@ -192,15 +231,14 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
     setCredits(0);
     setProgress(emptyProgress);
-    // Keep interests, just reset progress and credits
     await saveData({ credits: 0, progress: emptyProgress });
-    // Navigate to dashboard after reset
     window.location.href = '/dashboard';
   };
 
   return (
     <GameContext.Provider
       value={{
+        user,
         credits,
         progress,
         interests,
@@ -210,7 +248,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         resetHearts,
         completeStage,
         resetGame,
-        isInitialized: isInitialized && !userIsInitializing
+        isInitialized,
+        manualLogin,
+        manualLogout
       }}
     >
       {children}

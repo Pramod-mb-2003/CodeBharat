@@ -11,18 +11,16 @@ import { ArrowRight, BookCheck, LoaderCircle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { learningContent } from '@/lib/learning-data';
 import { Button } from '@/components/ui/button';
-import { useUser } from '@/firebase/auth/use-user';
 
 function DashboardContent() {
   const router = useRouter();
-  const { interests, progress, isInitialized, resetGame } = useGame();
-  const { user, isInitializing: userIsInitializing } = useUser();
+  const { interests, progress, isInitialized, resetGame, user } = useGame();
 
   useEffect(() => {
-    if (!userIsInitializing && !user) {
+    if (isInitialized && !user) {
       router.push('/');
     }
-  }, [user, userIsInitializing, router]);
+  }, [user, isInitialized, router]);
 
   useEffect(() => {
     if (isInitialized && user && interests.length === 0) {
@@ -30,7 +28,7 @@ function DashboardContent() {
     }
   }, [isInitialized, user, interests, router]);
 
-  if (!isInitialized || userIsInitializing || (user && interests.length === 0)) {
+  if (!isInitialized || (isInitialized && !user) || (user && interests.length === 0)) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center">
         <LoaderCircle className="h-16 w-16 animate-spin text-primary" />

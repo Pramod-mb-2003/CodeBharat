@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils';
 import { CheckCircle, Info, LoaderCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { useUser } from '@/firebase/auth/use-user';
 import { useGame } from '@/context/GameContext';
 
 
@@ -18,16 +17,16 @@ function ConfirmInterestsContent() {
   const { toast } = useToast();
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [isReady, setIsReady] = useState(false);
-  const { user, isInitializing } = useUser();
-  const { initializeInterests, interests: existingInterests } = useGame();
+  const { user, isInitialized, initializeInterests, interests: existingInterests } = useGame();
 
   useEffect(() => {
-    if (!isInitializing && !user) {
+    if (isInitialized && !user) {
       router.push('/');
     }
-  }, [user, isInitializing, router]);
+  }, [user, isInitialized, router]);
 
   useEffect(() => {
+    if (!isInitialized) return;
     if (existingInterests.length > 0) {
       router.push('/dashboard');
       return;
@@ -38,7 +37,7 @@ function ConfirmInterestsContent() {
       setSelectedInterests(initialInterests.slice(0, 3));
     }
     setIsReady(true);
-  }, [searchParams, existingInterests, router]);
+  }, [searchParams, existingInterests, router, isInitialized]);
 
   const toggleInterest = (interest: string) => {
     setSelectedInterests(prev => {
@@ -70,7 +69,7 @@ function ConfirmInterestsContent() {
     router.push(`/dashboard`);
   };
 
-  if (!isReady || isInitializing) {
+  if (!isReady || !isInitialized) {
     return (
         <div className="flex min-h-screen w-full items-center justify-center">
             <LoaderCircle className="h-16 w-16 animate-spin text-primary" />

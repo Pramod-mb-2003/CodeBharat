@@ -1,8 +1,7 @@
 'use client';
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { useAuth, useFirestore } from '@/firebase/provider';
+import { useFirestore } from '@/firebase/provider';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -18,49 +17,47 @@ import { useToast } from '@/hooks/use-toast';
 import { Rocket } from 'lucide-react';
 import Link from 'next/link';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useGame } from '@/context/GameContext';
 
 export default function LoginPage() {
   const router = useRouter();
-  const auth = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [userId, setUserId] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { manualLogin, isInitialized } = useGame();
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
-    if (!auth || !firestore) return;
+    if (!firestore || !isInitialized) return;
     setIsLoading(true);
 
     try {
-      // 1. Find user document by userId
       const usersRef = collection(firestore, 'users');
-      const q = query(usersRef, where('userId', '==', userId.trim()));
+      const q = query(usersRef, where('email', '==', email.trim()), where('password', '==', password));
       const querySnapshot = await getDocs(q);
 
       if (querySnapshot.empty) {
         throw new Error('invalid-credential');
       }
-
-      // 2. Get email from the user document
+      
       const userDoc = querySnapshot.docs[0];
       const userData = userDoc.data();
-      const email = userData.email;
+      
+      // Manually set user data in context instead of Firebase Auth
+      manualLogin({
+        uid: userDoc.id,
+        email: userData.email,
+        ...userData,
+      });
 
-      if (!email) {
-        throw new Error('user-data-corrupt');
-      }
-
-      // 3. Sign in with email and password
-      await signInWithEmailAndPassword(auth, email, password);
       router.push('/dashboard');
+
     } catch (error: any) {
       let description = 'An unexpected error occurred. Please try again.';
-      if (error.message === 'invalid-credential' || error.code === 'auth/invalid-credential') {
-        description = 'Invalid User ID or password.';
-      } else if (error.message === 'user-data-corrupt') {
-        description = 'User account is not configured correctly. Please contact an administrator.';
+      if (error.message === 'invalid-credential') {
+        description = 'Invalid email or password.';
       }
 
       toast({
@@ -68,6 +65,7 @@ export default function LoginPage() {
         description: description,
         variant: 'destructive',
       });
+    } finally {
       setIsLoading(false);
     }
   };
@@ -97,14 +95,14 @@ export default function LoginPage() {
           <form onSubmit={handleLogin}>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="userId">User ID</Label>
+                <Label htmlFor="email">Email</Label>
                 <Input
-                  id="userId"
-                  type="text"
-                  placeholder="your-user-id"
+                  id="email"
+                  type="email"
+                  placeholder="student@example.com"
                   required
-                  value={userId}
-                  onChange={e => setUserId(e.target.value)}
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
                   disabled={isLoading}
                 />
               </div>
@@ -121,7 +119,7 @@ export default function LoginPage() {
               </div>
             </CardContent>
             <CardFooter>
-              <Button type="submit" className="w-full" disabled={isLoading}>
+              <Button type="submit" className="w-full" disabled={isLoading || !isInitialized}>
                 {isLoading ? 'Logging In...' : 'Login'}
               </Button>
             </CardFooter>
