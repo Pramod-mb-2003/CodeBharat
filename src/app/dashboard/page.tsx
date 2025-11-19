@@ -1,7 +1,7 @@
 'use client';
 
 import { Suspense, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useGame } from '@/context/GameContext';
 import { INTERESTS } from '@/lib/constants';
@@ -15,11 +15,8 @@ import { useUser } from '@/firebase';
 
 function DashboardContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const { interests, progress, isInitialized, resetGame, initializeInterests } = useGame();
+  const { interests, progress, isInitialized, resetGame } = useGame();
   const { user, isInitializing: userIsInitializing } = useUser();
-  
-  const interestsParam = searchParams.get('interests');
 
   useEffect(() => {
     if (!userIsInitializing && !user) {
@@ -28,33 +25,15 @@ function DashboardContent() {
   }, [user, userIsInitializing, router]);
 
   useEffect(() => {
-    if (isInitialized && user) {
-      const interestsFromUrl = interestsParam ? interestsParam.split(',') : [];
-      if (interestsFromUrl.length > 0) {
-        initializeInterests(interestsFromUrl);
-      } else if (interests.length === 0) {
-        router.push('/quiz');
-      }
+    if (isInitialized && user && interests.length === 0) {
+      router.push('/quiz');
     }
-  }, [isInitialized, user, interestsParam, router, initializeInterests, interests]);
+  }, [isInitialized, user, interests, router]);
 
-
-  if (!isInitialized || userIsInitializing) {
+  if (!isInitialized || userIsInitializing || (user && interests.length === 0)) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center">
         <LoaderCircle className="h-16 w-16 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (interests.length === 0) {
-     return (
-      <div className="flex flex-col items-center justify-center min-h-screen text-center p-4">
-        <h2 className="text-2xl font-bold mb-4">No interests selected!</h2>
-        <p className="text-muted-foreground mb-6">Please start the quiz to discover your interests.</p>
-        <Button asChild>
-          <Link href="/quiz">Take the Quiz</Link>
-        </Button>
       </div>
     );
   }

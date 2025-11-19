@@ -9,6 +9,7 @@ import { CheckCircle, Info, LoaderCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useUser } from '@/firebase';
+import { useGame } from '@/context/GameContext';
 
 
 function ConfirmInterestsContent() {
@@ -18,6 +19,7 @@ function ConfirmInterestsContent() {
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [isReady, setIsReady] = useState(false);
   const { user, isInitializing } = useUser();
+  const { initializeInterests, interests: existingInterests } = useGame();
 
   useEffect(() => {
     if (!isInitializing && !user) {
@@ -26,13 +28,17 @@ function ConfirmInterestsContent() {
   }, [user, isInitializing, router]);
 
   useEffect(() => {
+    if (existingInterests.length > 0) {
+      router.push('/dashboard');
+      return;
+    }
     const interestsParam = searchParams.get('interests');
     if (interestsParam) {
       const initialInterests = interestsParam.split(',').filter(i => ALL_INTEREST_KEYS.includes(i));
       setSelectedInterests(initialInterests.slice(0, 3));
     }
     setIsReady(true);
-  }, [searchParams]);
+  }, [searchParams, existingInterests, router]);
 
   const toggleInterest = (interest: string) => {
     setSelectedInterests(prev => {
@@ -51,7 +57,7 @@ function ConfirmInterestsContent() {
     });
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (selectedInterests.length < 2 || selectedInterests.length > 3) {
       toast({
         title: "Invalid Selection",
@@ -60,8 +66,8 @@ function ConfirmInterestsContent() {
       });
       return;
     }
-    const interestsQuery = selectedInterests.join(',');
-    router.push(`/dashboard?interests=${interestsQuery}`);
+    await initializeInterests(selectedInterests);
+    router.push(`/dashboard`);
   };
 
   if (!isReady || isInitializing) {

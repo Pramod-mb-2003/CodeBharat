@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useUser, useFirestore } from '@/firebase';
-import { doc, setDoc, getDoc, DocumentData } from 'firebase/firestore';
+import { doc, setDoc, getDoc, DocumentData, serverTimestamp } from 'firebase/firestore';
 
 
 type Progress = {
@@ -66,6 +66,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
                 setCredits(data.credits || 0);
                 setProgress(data.progress || {});
                 setInterests(data.interests || []);
+            } else {
+              // Create initial document for new user
+              await saveData({ credits: 0, progress: {}, interests: [] });
             }
             setIsInitialized(true);
         } else if (!user && !userIsInitializing) {
@@ -77,7 +80,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         }
     };
     loadData();
-  }, [user, firestore, userIsInitializing]);
+  }, [user, firestore, userIsInitializing, saveData]);
 
 
   useEffect(() => {
@@ -131,11 +134,11 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         setProgress(newProgress);
         setInterests(newInterests);
         await saveData({ progress: newProgress, interests: newInterests });
-    } else {
+    } else if (JSON.stringify(interests) !== JSON.stringify(newInterests)) {
         setInterests(newInterests);
         await saveData({ interests: newInterests });
     }
-  }, [progress, saveData]);
+  }, [progress, saveData, interests]);
 
   const addCredits = (amount: number) => {
     const newCredits = credits + amount;
@@ -181,10 +184,17 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const resetGame = async () => {
+    const emptyProgress: Progress = {};
+    interests.forEach(interest => {
+      emptyProgress[interest] = { unlockedStage: 1, hearts: MAX_HEARTS, lastHeartLost: null };
+    });
+
     setCredits(0);
-    setProgress({});
-    setInterests([]);
-    await saveData({ credits: 0, progress: {}, interests: [] });
+    setProgress(emptyProgress);
+    // Keep interests, just reset progress and credits
+    await saveData({ credits: 0, progress: emptyProgress });
+    // Navigate to dashboard after reset
+    window.location.href = '/dashboard';
   };
 
   return (
