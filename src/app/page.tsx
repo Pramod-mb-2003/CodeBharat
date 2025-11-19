@@ -14,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Rocket } from 'lucide-react';
+import { LogOut, Rocket } from 'lucide-react';
 import Link from 'next/link';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { useGame } from '@/context/GameContext';
@@ -26,7 +26,7 @@ export default function LoginPage() {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { manualLogin, isInitialized } = useGame();
+  const { user, manualLogin, manualLogout, isInitialized } = useGame();
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -69,6 +69,10 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+  
+  const handleSignOut = () => {
+    manualLogout();
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -80,6 +84,12 @@ export default function LoginPage() {
               Interest Ignition
             </span>
           </Link>
+          {user && (
+            <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sign Out">
+                <LogOut className="h-5 w-5" />
+                <span className="sr-only">Sign Out</span>
+            </Button>
+          )}
         </div>
       </header>
       <main className="flex-grow flex items-center justify-center p-4">
