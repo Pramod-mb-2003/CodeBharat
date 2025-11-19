@@ -47,7 +47,7 @@ const prompt = ai.definePrompt({
 
 Quiz Responses: {{{quizResponses}}}
 
-Return the top interests in an array.
+Return the top interests in an array. If the responses are ambiguous, return an empty array.
 Example: ["sports", "science"]`,
 });
 
@@ -62,4 +62,3 @@ const analyzeInterestQuizResponsesFlow = ai.defineFlow(
     return output!;
   }
 );
-
