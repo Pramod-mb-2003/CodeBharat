@@ -24,6 +24,7 @@ export default function StagePage() {
   const stageId = parseInt(Array.isArray(params.stage) ? params.stage[0] : params.stage, 10);
 
   const stage = learningContent[interestKey]?.find(s => s.id === stageId);
+  const interestProgress = progress[interestKey];
 
   const [view, setView] = useState<'video' | 'quiz'>('video');
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
@@ -46,7 +47,6 @@ export default function StagePage() {
   useEffect(() => {
     if (!isInitialized) return;
 
-    const interestProgress = progress[interestKey];
     if (!interestProgress) {
         if(isInitialized) router.push('/dashboard');
         return;
@@ -65,7 +65,7 @@ export default function StagePage() {
       toast({ title: "Stage Locked!", description: "Complete previous stages to unlock this one.", variant: 'destructive' });
       router.push(`/learn/${interestKey}`);
     }
-  }, [interestKey, stageId, progress, router, toast, isInitialized]);
+  }, [interestKey, stageId, progress, router, toast, isInitialized, interestProgress]);
 
   if (!isInitialized || !user) {
     return (
@@ -87,28 +87,38 @@ export default function StagePage() {
     setSubmittedAnswer(selectedAnswer);
 
     if (selectedAnswer === stage.correctAnswerIndex) {
-      const previousCredits = previousCreditsRef.current;
-      const newCredits = previousCredits + 10;
-      
-      const unlockedGoodie = ALL_GOODIES.find(goodie => 
-          previousCredits < goodie.id && newCredits >= goodie.id && (goodie.type === 'badge' || goodie.type === 'trophy')
-      );
+      const isFirstTimeCompletion = interestProgress && stageId >= interestProgress.unlockedStage;
 
-      let toastDescription = "+10 Credits! Well done.";
-      if (unlockedGoodie) {
-        toastDescription = `+10 Credits and you unlocked the ${unlockedGoodie.name}!`;
-        setShowConfetti(true);
+      if (isFirstTimeCompletion) {
+        const previousCredits = previousCreditsRef.current;
+        const newCredits = previousCredits + 10;
+        
+        const unlockedGoodie = ALL_GOODIES.find(goodie => 
+            previousCredits < goodie.id && newCredits >= goodie.id && (goodie.type === 'badge' || goodie.type === 'trophy')
+        );
+
+        let toastDescription = "+10 Credits! Well done.";
+        if (unlockedGoodie) {
+          toastDescription = `+10 Credits and you unlocked the ${unlockedGoodie.name}!`;
+          setShowConfetti(true);
+        }
+
+        toast({
+          title: "Correct!",
+          description: toastDescription,
+          className: 'bg-green-500 text-white'
+        });
+        
+        addCredits(10);
+        completeStage(interestKey, stageId);
+      } else {
+        toast({
+          title: "Correct!",
+          description: "You've already completed this stage.",
+          className: 'bg-green-500 text-white'
+        });
       }
 
-
-      toast({
-        title: "Correct!",
-        description: toastDescription,
-        className: 'bg-green-500 text-white'
-      });
-      
-      addCredits(10);
-      completeStage(interestKey, stageId);
       setTimeout(() => router.push(`/learn/${interestKey}`), 2000);
     } else {
       toast({
