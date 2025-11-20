@@ -9,8 +9,12 @@ import { Progress } from '@/components/ui/progress';
 import { LoaderCircle, Rocket } from 'lucide-react';
 import { useGame } from '@/context/GameContext';
 import { useToast } from '@/hooks/use-toast';
-import { getQuizQuestions, type QuizQuestion } from '@/ai/flows/get-quiz-questions';
-import { submitQuiz } from '../actions';
+
+// Define the shape of a question based on the new API response
+type QuizQuestion = {
+  q: string;
+  options: string[];
+};
 
 
 export default function QuizPage() {
@@ -33,11 +37,21 @@ export default function QuizPage() {
     const fetchQuestions = async () => {
       try {
         setIsLoading(true);
-        const data = await getQuizQuestions({ studentStandard: '8' });
+        const response = await fetch('/api/get-questions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ standard: '8' }),
+        });
+        if (!response.ok) {
+            throw new Error('Failed to fetch questions');
+        }
+        const data = await response.json();
         if (data.questions && data.questions.length > 0) {
             setQuestions(data.questions);
         } else {
-          throw new Error('No questions received from AI');
+          throw new Error('No questions received from API');
         }
       } catch (error) {
         console.error("Error fetching quiz questions:", error);
@@ -51,8 +65,10 @@ export default function QuizPage() {
       }
     };
 
-    fetchQuestions();
-  }, [toast]);
+    if(isInitialized) {
+      fetchQuestions();
+    }
+  }, [toast, isInitialized]);
 
 
   const handleAnswerSelect = (questionIndex: number, optionIndex: number) => {
@@ -76,12 +92,33 @@ export default function QuizPage() {
     setIsSubmitting(true);
     
     try {
-        const formattedAnswers = questions.map((q, index) => ({
-          question: q.questionText,
-          option: q.options[answers[index]]
-        }));
+        const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ answers: Object.values(answers) }),
+        });
+        
+        if (!response.ok) {
+            throw new Error('Analysis request failed');
+        }
 
-        await submitQuiz(formattedAnswers);
+        const result = await response.json();
+        
+        const interestKeys = result.predictedInterests
+            .map((interestName: string) => {
+              const lowerCaseName = interestName.toLowerCase();
+              if (lowerCaseName.includes('art')) return 'creativity';
+              if (lowerCaseName.includes('social')) return 'social';
+              if (lowerCaseName.includes('math')) return 'math';
+              if (lowerCaseName.includes('sports')) return 'sports';
+              if (lowerCaseName.includes('science')) return 'science';
+              if (lowerCaseName.includes('english')) return 'english';
+              return null;
+            })
+            .filter(Boolean)
+            .join(',');
+
+        router.push(`/confirm-interests?interests=${interestKeys}`);
 
     } catch(error) {
         console.error("Error submitting quiz:", error);
@@ -128,7 +165,7 @@ export default function QuizPage() {
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-8">
               <div key={currentQuestionIndex} className="space-y-4">
-                <p className="text-lg font-semibold text-center">{currentQuestionIndex + 1}. {currentQuestion.questionText}</p>
+                <p className="text-lg font-semibold text-center">{currentQuestionIndex + 1}. {currentQuestion.q}</p>
                 <RadioGroup
                   value={answers[currentQuestionIndex]?.toString() || ''}
                   onValueChange={(value) => handleAnswerSelect(currentQuestionIndex, parseInt(value))}
