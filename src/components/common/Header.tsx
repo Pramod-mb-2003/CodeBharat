@@ -81,8 +81,8 @@ export function Header({ interest }: HeaderProps) {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container flex h-16 max-w-screen-2xl items-center justify-between">
-        <Link href="/dashboard" className="flex items-center gap-2">
+      <div className="container flex h-16 max-w-screen-2xl items-center">
+        <Link href="/dashboard" className="flex items-center gap-2 mr-auto">
           <Rocket className="w-8 h-8 text-primary" />
           <span className="hidden sm:inline text-2xl font-bold text-foreground font-headline">
             Interest Ignition
@@ -112,11 +112,11 @@ export function Header({ interest }: HeaderProps) {
               <span className="sr-only">{hearts} hearts remaining</span>
             </div>
           )}
-           <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sign Out">
+        </div>
+        <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sign Out" className="ml-4">
             <LogOut className="h-5 w-5" />
             <span className="sr-only">Sign Out</span>
-          </Button>
-        </div>
+        </Button>
       </div>
     </header>
   );
