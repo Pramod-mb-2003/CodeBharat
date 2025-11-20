@@ -1,150 +1,106 @@
 'use client';
-import { FormEvent, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useFirestore } from '@/firebase/provider';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useToast } from '@/hooks/use-toast';
-import { LogOut, Rocket } from 'lucide-react';
-import Link from 'next/link';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useGame } from '@/context/GameContext';
+import { Rocket } from 'lucide-react';
+import Image from 'next/image';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function LoginPage() {
-  const router = useRouter();
-  const firestore = useFirestore();
-  const { toast } = useToast();
-  const [userId, setUserId] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const { user, manualLogin, manualLogout, isInitialized } = useGame();
+  const router = useRouter();
+  const { manualLogin, user, isInitialized } = useGame();
+  
+  const heroImage = PlaceHolderImages.find(img => img.id === 'hero');
 
-  const handleLogin = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!firestore || !isInitialized) return;
-    setIsLoading(true);
-
-    try {
-      const usersRef = collection(firestore, 'users');
-      const q = query(usersRef, where('userId', '==', userId.trim()), where('password', '==', password));
-      const querySnapshot = await getDocs(q);
-
-      if (querySnapshot.empty) {
-        throw new Error('invalid-credential');
-      }
-      
-      const userDoc = querySnapshot.docs[0];
-      const userData = userDoc.data();
-      
-      const loggedInUser = {
-        uid: userDoc.id,
-        email: userData.email,
-        ...userData,
-      };
-
-      // Manually set user data in context instead of Firebase Auth
-      manualLogin(loggedInUser);
-
-      if (userData.interests && userData.interests.length > 0) {
-        router.push('/dashboard');
-      } else {
-        router.push('/quiz');
-      }
-
-    } catch (error: any) {
-      let description = 'An unexpected error occurred. Please try again.';
-      if (error.message === 'invalid-credential') {
-        description = 'Invalid User ID or password.';
-      }
-
-      toast({
-        title: 'Login Failed',
-        description: description,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
+  useEffect(() => {
+    if (isInitialized && user) {
+      router.push('/dashboard');
     }
+  }, [user, isInitialized, router]);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Simple mock user object. In a real app, this would involve a backend call.
+    const mockUser = {
+      uid: email, // Using email as UID for simplicity
+      email: email,
+    };
+    manualLogin(mockUser);
+    router.push('/dashboard');
   };
   
-  const handleSignOut = () => {
-    manualLogout();
-  };
+  if (!isInitialized) {
+      return (
+          <div className="flex min-h-screen w-full items-center justify-center">
+            <Rocket className="h-16 w-16 animate-pulse text-primary" />
+          </div>
+      )
+  }
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
-       <header className="container mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-2">
-            <Rocket className="w-8 h-8 text-primary" />
-            <span className="text-2xl font-bold text-foreground font-headline">
-              Interest Ignition
-            </span>
-          </Link>
-          {user && (
-            <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sign Out">
-                <LogOut className="h-5 w-5" />
-                <span className="sr-only">Sign Out</span>
-            </Button>
-          )}
-        </div>
-      </header>
-      <main className="flex-grow flex items-center justify-center p-4">
-        <Card className="w-full max-w-sm shadow-2xl">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold font-headline">
-              Student Login
-            </CardTitle>
-            <CardDescription>
-              Enter your credentials to start learning!
-            </CardDescription>
-          </CardHeader>
-          <form onSubmit={handleLogin}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="userId">User ID</Label>
-                <Input
-                  id="userId"
-                  type="text"
-                  placeholder="Enter your User ID"
-                  required
-                  value={userId}
-                  onChange={e => setUserId(e.target.value)}
-                  disabled={isLoading}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  required
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  disabled={isLoading}
-                />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button type="submit" className="w-full" disabled={isLoading || !isInitialized}>
-                {isLoading ? 'Logging In...' : 'Login'}
-              </Button>
-            </CardFooter>
-          </form>
+    <div className="w-full lg:grid lg:min-h-[100vh] lg:grid-cols-2 xl:min-h-[100vh]">
+      <div className="flex items-center justify-center py-12">
+        <Card className="mx-auto max-w-sm w-full shadow-2xl border-primary/20">
+            <form onSubmit={handleLogin}>
+                <CardHeader className="text-center">
+                    <div className="flex justify-center items-center gap-2 mb-2">
+                        <Rocket className="w-10 h-10 text-primary" />
+                        <h1 className="text-3xl font-bold font-headline">Interest Ignition</h1>
+                    </div>
+                    <CardDescription>
+                        Enter your email below to login to your account
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                        id="email"
+                        type="email"
+                        placeholder="m@example.com"
+                        required
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <div className="flex items-center">
+                        <Label htmlFor="password">Password</Label>
+                        </div>
+                        <Input 
+                            id="password" 
+                            type="password" 
+                            required 
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                        />
+                    </div>
+                </CardContent>
+                <CardFooter>
+                    <Button type="submit" className="w-full">
+                        Login
+                    </Button>
+                </CardFooter>
+            </form>
         </Card>
-      </main>
-       <footer className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} Interest Ignition. All rights reserved.</p>
-      </footer>
+      </div>
+       <div className="hidden bg-muted lg:block relative">
+        {heroImage && (
+            <Image
+                src={heroImage.imageUrl}
+                alt={heroImage.description}
+                fill
+                className="object-cover"
+                data-ai-hint={heroImage.imageHint}
+            />
+        )}
+      </div>
     </div>
   );
 }
