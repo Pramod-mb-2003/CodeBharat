@@ -81,11 +81,11 @@ export default function StagePage() {
     if (selectedAnswer === stage.correctAnswerIndex) {
       toast({
         title: "Correct!",
-        description: "+1 Credit! Well done.",
+        description: "+10 Credits! Well done.",
         className: 'bg-green-500 text-white'
       });
       setShowConfetti(true);
-      addCredits(1);
+      addCredits(10);
       completeStage(interestKey, stageId);
       setTimeout(() => router.push(`/learn/${interestKey}`), 2000);
     } else {
