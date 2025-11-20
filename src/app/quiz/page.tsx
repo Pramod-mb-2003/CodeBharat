@@ -55,11 +55,7 @@ export default function QuizPage() {
         }
       } catch (error) {
         console.error("Error fetching quiz questions, using fallback:", error);
-        toast({
-          title: "Using Fallback Quiz",
-          description: "Couldn't generate dynamic questions, but we've got you covered!",
-          variant: "default"
-        });
+        // Fallback to static questions without showing a toast.
         setQuestions(getShuffledQuestions(staticQuestions, 8));
       } finally {
         setIsLoading(false);
@@ -69,7 +65,7 @@ export default function QuizPage() {
     if(isInitialized) {
       fetchQuestions();
     }
-  }, [toast, isInitialized]);
+  }, [isInitialized]);
 
 
   const handleAnswerSelect = (questionIndex: number, optionIndex: number) => {
@@ -105,7 +101,6 @@ export default function QuizPage() {
 
         const result = await response.json();
         
-        // The API returns simple names, we map them to the keys used internally
         const interestKeys = result.predictedInterests
             .map((interestName: string) => {
               const lowerCaseName = interestName.toLowerCase();
