@@ -9,23 +9,12 @@ import { Progress } from '@/components/ui/progress';
 import { LoaderCircle, Rocket } from 'lucide-react';
 import { useGame } from '@/context/GameContext';
 import { useToast } from '@/hooks/use-toast';
+import { getQuizQuestions, type QuizQuestion } from '@/ai/flows/get-quiz-questions';
+import { submitQuiz } from '../actions';
 
-export type DynamicQuizQuestion = {
-  q: string;
-  options: string[];
-};
-
-const CATEGORY_MAP = [
-  "sports",
-  "science",
-  "math",
-  "english",
-  "social",
-  "creativity",
-];
 
 export default function QuizPage() {
-  const [questions, setQuestions] = useState<DynamicQuizQuestion[]>([]);
+  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,17 +33,11 @@ export default function QuizPage() {
     const fetchQuestions = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch('/api/get-questions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ standard: 8 }), // Using a default standard
-        });
-        if (!response.ok) {
-            throw new Error('Failed to fetch questions');
-        }
-        const data = await response.json();
+        const data = await getQuizQuestions({ studentStandard: '8' });
         if (data.questions && data.questions.length > 0) {
             setQuestions(data.questions);
+        } else {
+          throw new Error('No questions received from AI');
         }
       } catch (error) {
         console.error("Error fetching quiz questions:", error);
@@ -93,30 +76,12 @@ export default function QuizPage() {
     setIsSubmitting(true);
     
     try {
-        const answerIndexes = questions.map((_, index) => answers[index]);
-        const res = await fetch('/api/analyze', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ answers: answerIndexes }),
-        });
+        const formattedAnswers = questions.map((q, index) => ({
+          question: q.questionText,
+          option: q.options[answers[index]]
+        }));
 
-        if (!res.ok) {
-            throw new Error('Failed to analyze answers');
-        }
-
-        const result = await res.json();
-        
-        // The /api/analyze endpoint returns full names e.g. "Sports", "Mathematics"
-        // We need to convert them to our internal keys e.g. "sports", "math"
-        const interestKeys = result.predictedInterests.map((interestName: string) => {
-            const lowerCaseName = interestName.toLowerCase();
-            if (lowerCaseName.includes('art')) return 'creativity';
-            if (lowerCaseName.includes('social')) return 'social';
-            if (lowerCaseName.includes('math')) return 'math';
-            return lowerCaseName;
-        }).join(',');
-        
-        router.push(`/confirm-interests?interests=${interestKeys}`);
+        await submitQuiz(formattedAnswers);
 
     } catch(error) {
         console.error("Error submitting quiz:", error);
@@ -163,7 +128,7 @@ export default function QuizPage() {
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-8">
               <div key={currentQuestionIndex} className="space-y-4">
-                <p className="text-lg font-semibold text-center">{currentQuestionIndex + 1}. {currentQuestion.q}</p>
+                <p className="text-lg font-semibold text-center">{currentQuestionIndex + 1}. {currentQuestion.questionText}</p>
                 <RadioGroup
                   value={answers[currentQuestionIndex]?.toString() || ''}
                   onValueChange={(value) => handleAnswerSelect(currentQuestionIndex, parseInt(value))}
@@ -199,7 +164,7 @@ export default function QuizPage() {
                 Next
               </Button>
             ) : (
-              <Button type="submit" disabled={isSubmitting || answers[currentQuestionIndex] === undefined}>
+              <Button type="submit" disabled={isSubmitting || Object.keys(answers).length < questions.length}>
                 {isSubmitting ? 'Analyzing...' : 'Finish & See Results'}
               </Button>
             )}
