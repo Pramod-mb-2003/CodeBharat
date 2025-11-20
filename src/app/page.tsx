@@ -11,7 +11,7 @@ import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const router = useRouter();
   const { manualLogin, user, isInitialized } = useGame();
@@ -28,8 +28,8 @@ export default function LoginPage() {
     e.preventDefault();
     // Simple mock user object. In a real app, this would involve a backend call.
     const mockUser = {
-      uid: email, // Using email as UID for simplicity
-      email: email,
+      uid: userId,
+      email: `${userId}@example.com`, // mock email for consistency with user type
     };
     manualLogin(mockUser);
     router.push('/dashboard');
@@ -54,19 +54,19 @@ export default function LoginPage() {
                         <h1 className="text-3xl font-bold font-headline">Interest Ignition</h1>
                     </div>
                     <CardDescription>
-                        Enter your email below to login to your account
+                        Enter your User ID below to login to your account
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-4">
                     <div className="grid gap-2">
-                        <Label htmlFor="email">Email</Label>
+                        <Label htmlFor="userId">User ID</Label>
                         <Input
-                        id="email"
-                        type="email"
-                        placeholder="m@example.com"
+                        id="userId"
+                        type="text"
+                        placeholder="your-user-id"
                         required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
+                        value={userId}
+                        onChange={(e) => setUserId(e.target.value)}
                         />
                     </div>
                     <div className="grid gap-2">
