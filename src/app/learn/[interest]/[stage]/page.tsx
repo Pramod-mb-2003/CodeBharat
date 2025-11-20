@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useGame } from '@/context/GameContext';
 import { Header } from '@/components/common/Header';
@@ -12,12 +12,13 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { Check, LoaderCircle, X } from 'lucide-react';
 import Confetti from 'react-dom-confetti';
+import { ALL_GOODIES } from '@/lib/goodies-data';
 
 export default function StagePage() {
   const router = useRouter();
   const params = useParams();
   const { toast } = useToast();
-  const { addCredits, loseHeart, completeStage, progress, isInitialized, user } = useGame();
+  const { credits, addCredits, loseHeart, completeStage, progress, isInitialized, user } = useGame();
 
   const interestKey = Array.isArray(params.interest) ? params.interest[0] : params.interest;
   const stageId = parseInt(Array.isArray(params.stage) ? params.stage[0] : params.stage, 10);
@@ -28,6 +29,13 @@ export default function StagePage() {
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [submittedAnswer, setSubmittedAnswer] = useState<number | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
+  
+  const previousCreditsRef = useRef(credits);
+
+  useEffect(() => {
+    previousCreditsRef.current = credits;
+  }, [credits]);
+
 
   useEffect(() => {
     if (isInitialized && !user) {
@@ -79,12 +87,26 @@ export default function StagePage() {
     setSubmittedAnswer(selectedAnswer);
 
     if (selectedAnswer === stage.correctAnswerIndex) {
+      const previousCredits = previousCreditsRef.current;
+      const newCredits = previousCredits + 10;
+      
+      const unlockedGoodie = ALL_GOODIES.find(goodie => 
+          previousCredits < goodie.id && newCredits >= goodie.id && (goodie.type === 'badge' || goodie.type === 'trophy')
+      );
+
+      let toastDescription = "+10 Credits! Well done.";
+      if (unlockedGoodie) {
+        toastDescription = `+10 Credits and you unlocked the ${unlockedGoodie.name}!`;
+        setShowConfetti(true);
+      }
+
+
       toast({
         title: "Correct!",
-        description: "+10 Credits! Well done.",
+        description: toastDescription,
         className: 'bg-green-500 text-white'
       });
-      setShowConfetti(true);
+      
       addCredits(10);
       completeStage(interestKey, stageId);
       setTimeout(() => router.push(`/learn/${interestKey}`), 2000);
