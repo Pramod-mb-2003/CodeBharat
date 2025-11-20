@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     const prompt = `
 Generate exactly 8 psychometric MCQ questions for Standard ${standard}.
 Each question must have exactly 6 options.
-Detect interest in Sports, Science, Mathematics, English, Social Science, Art & Craft.
+Detect interest in Sports, Science, English, Creativity, Social Studies, Math.
 
 Return ONLY valid JSON:
 {

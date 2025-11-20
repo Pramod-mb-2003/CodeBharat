@@ -43,7 +43,7 @@ const prompt = ai.definePrompt({
   name: 'analyzeInterestQuizResponsesPrompt',
   input: {schema: AnalyzeInterestQuizResponsesInputSchema},
   output: {schema: AnalyzeInterestQuizResponsesOutputSchema},
-  prompt: `You are an expert in analyzing user responses to identify their top interests among the following categories: sports, science, english, creativity, social studies, and math. Based on the user's quiz responses, accurately determine and return the top 2-3 interests.
+  prompt: `You are an expert in analyzing user responses to identify their top interests among the following categories: sports, science, english, creativity, social, and math. Based on the user's quiz responses, accurately determine and return the top 2-3 interests.
 
 Quiz Responses: {{{quizResponses}}}
 
@@ -59,6 +59,10 @@ const analyzeInterestQuizResponsesFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await prompt(input);
+    // Ensure the output is always an array, even on failure
+    if (!output || !Array.isArray(output.topInterests)) {
+      return { topInterests: [] };
+    }
     return output!;
   }
 );
