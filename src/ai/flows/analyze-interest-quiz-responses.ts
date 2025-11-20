@@ -15,7 +15,7 @@ const AnalyzeInterestQuizResponsesInputSchema = z.object({
   quizResponses: z
     .string()
     .describe(
-      'A string containing the user quiz responses to analyze for identifying interests.'
+      'A comma-separated string of interest categories selected by the user in a quiz.'
     ),
 });
 export type AnalyzeInterestQuizResponsesInput = z.infer<
@@ -26,7 +26,7 @@ const AnalyzeInterestQuizResponsesOutputSchema = z.object({
   topInterests: z
     .array(z.string())
     .describe(
-      'An array containing the top 2-3 identified interests based on the quiz responses.'
+      'An array containing the top 2-3 most frequent interests from the input string. The interests must be one of the following exact keys: "sports", "science", "english", "creativity", "social", "math".'
     ),
 });
 export type AnalyzeInterestQuizResponsesOutput = z.infer<
@@ -43,12 +43,17 @@ const prompt = ai.definePrompt({
   name: 'analyzeInterestQuizResponsesPrompt',
   input: {schema: AnalyzeInterestQuizResponsesInputSchema},
   output: {schema: AnalyzeInterestQuizResponsesOutputSchema},
-  prompt: `You are an expert in analyzing user responses to identify their top interests among the following categories: sports, science, english, creativity, social, and math. Based on the user's quiz responses, accurately determine and return the top 2-3 interests.
+  prompt: `You are an expert at analyzing quiz data. Your task is to identify the top 2 or 3 most frequently occurring interests from a comma-separated list of user choices.
 
-Quiz Responses: {{{quizResponses}}}
+The possible interest categories are: "sports", "science", "english", "creativity", "social", "math".
 
-Return the top interests in an array. If the responses are ambiguous, return an empty array.
-Example: ["sports", "science"]`,
+Analyze the following user choices and determine which categories appear most often. Return the top 2 or 3 as an array of strings. The strings in the output array must be the exact keys from the list above.
+
+User Choices: {{{quizResponses}}}
+
+Example Input: "sports,math,sports,science,sports,math"
+Example Output: { "topInterests": ["sports", "math"] }
+`,
 });
 
 const analyzeInterestQuizResponsesFlow = ai.defineFlow(

@@ -3,15 +3,9 @@ import { analyzeInterestQuizResponses } from '@/ai/flows/analyze-interest-quiz-r
 import { redirect } from 'next/navigation';
 
 export async function submitQuiz(formData: FormData) {
-  let quizResponsesText = 'User responses:\n';
-
-  // Iterate over form entries
-  for (const [questionId, answerCategory] of formData.entries()) {
-    // Assuming questionId is like "q0", "q1", etc. and answerCategory is the interest key
-    if (typeof answerCategory === 'string' && answerCategory) {
-       quizResponsesText += `- For question ${parseInt(questionId.substring(1)) + 1}, user chose an option related to ${answerCategory}.\n`;
-    }
-  }
+  // Create a simple, comma-separated string of the chosen interest categories
+  const selectedCategories = Array.from(formData.values());
+  const quizResponsesText = selectedCategories.join(',');
 
   try {
     const result = await analyzeInterestQuizResponses({ quizResponses: quizResponsesText });
