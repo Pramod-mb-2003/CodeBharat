@@ -62,24 +62,42 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [allInterestsComplete, setAllInterestsComplete] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  const saveData = useCallback(async (gameData: Partial<GameData>, creditsData?: Partial<CreditsData>) => {
-      if (!firestore || !user) return;
+  const saveData = useCallback(async (userId: string, gameData?: Partial<GameData>, creditsData?: Partial<CreditsData>) => {
+      if (!firestore) return;
       try {
-        const userDocRef = doc(firestore, 'users', user.uid);
-        await setDoc(userDocRef, gameData, { merge: true });
+        if (gameData) {
+            const userDocRef = doc(firestore, 'users', userId);
+            await setDoc(userDocRef, gameData, { merge: true });
+        }
 
         if (creditsData) {
-            const creditsDocRef = doc(firestore, 'user_credits', user.uid);
+            const creditsDocRef = doc(firestore, 'user_credits', userId);
             await setDoc(creditsDocRef, creditsData, { merge: true });
         }
       } catch (error) {
           console.error("Failed to save game data:", error);
       }
-  }, [firestore, user]);
+  }, [firestore]);
 
-  const manualLogin = (userData: MockUser) => {
+
+  const manualLogin = async (userData: MockUser) => {
     setUser(userData);
     sessionStorage.setItem('user', JSON.stringify(userData));
+
+    if (firestore) {
+        const userDocRef = doc(firestore, 'users', userData.uid);
+        const creditsDocRef = doc(firestore, 'user_credits', userData.uid);
+        
+        const userDocSnap = await getDoc(userDocRef);
+        const creditsDocSnap = await getDoc(creditsDocRef);
+
+        if (!userDocSnap.exists()) {
+            await saveData(userData.uid, { progress: {}, interests: [] });
+        }
+        if (!creditsDocSnap.exists()) {
+            await saveData(userData.uid, undefined, { credits: 0 });
+        }
+    }
   };
   
   const manualLogout = () => {
@@ -117,14 +135,14 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
                 setProgress(data.progress || {});
                 setInterests(data.interests || []);
             } else {
-              await saveData({ progress: {}, interests: [] });
+              await saveData(user.uid, { progress: {}, interests: [] });
             }
 
             if(creditsDocSnap.exists()) {
                 const data = creditsDocSnap.data() as CreditsData;
                 setCredits(data.credits || 0);
             } else {
-                await saveData({}, { credits: 0 });
+                await saveData(user.uid, undefined, { credits: 0 });
             }
         } else {
             setCredits(0);
@@ -181,7 +199,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       }
       if (needsUpdate) {
         setProgress(newProgress);
-        saveData({ progress: newProgress });
+        saveData(user.uid, { progress: newProgress });
       }
     }, 1000);
 
@@ -200,7 +218,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
     setInterests(newInterests);
     setProgress(newProgress);
-    await saveData({ progress: newProgress, interests: newInterests });
+    await saveData(user.uid, { progress: newProgress, interests: newInterests });
   }, [progress, saveData, user]);
 
   const updateInterests = useCallback(async (newInterest: string) => {
@@ -214,7 +232,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     
     setInterests(newInterests);
     setProgress(newProgress);
-    await saveData({ interests: newInterests, progress: newProgress });
+    await saveData(user.uid, { interests: newInterests, progress: newProgress });
 
 }, [user, interests, progress, saveData]);
 
@@ -222,7 +240,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     if (!user) return;
     const newCredits = credits + amount;
     setCredits(newCredits);
-    saveData({}, { credits: newCredits });
+    saveData(user.uid, undefined, { credits: newCredits });
   };
 
   const loseHeart = (interest: string) => {
@@ -237,7 +255,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         lastHeartLost: newHearts < MAX_HEARTS ? (currentInterestProgress.lastHeartLost || Date.now()) : null,
     };
     setProgress(newProgress);
-    saveData({ progress: newProgress });
+    saveData(user.uid, { progress: newProgress });
   };
 
   const resetHearts = (interest: string) => {
@@ -249,7 +267,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         lastHeartLost: null,
     };
     setProgress(newProgress);
-    saveData({ progress: newProgress });
+    saveData(user.uid, { progress: newProgress });
   };
 
   const completeStage = (interest: string, stageId: number) => {
@@ -262,7 +280,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       unlockedStage: Math.max(interestProgress.unlockedStage, stageId + 1),
     };
     setProgress(newProgress);
-    saveData({ progress: newProgress });
+    saveData(user.uid, { progress: newProgress });
   };
 
   const resetGame = async () => {
@@ -274,7 +292,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
 
     setCredits(0);
     setProgress(emptyProgress);
-    await saveData({ progress: emptyProgress }, { credits: 0 });
+    await saveData(user.uid, { progress: emptyProgress }, { credits: 0 });
     window.location.href = '/dashboard';
   };
 
@@ -310,3 +328,5 @@ export const useGame = () => {
   }
   return context;
 };
+
+    
