@@ -9,12 +9,15 @@ import { useGame } from '@/context/GameContext';
 import { Rocket } from 'lucide-react';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { useToast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const router = useRouter();
   const { manualLogin, user, isInitialized } = useGame();
+  const { toast } = useToast();
   
   const heroImage = PlaceHolderImages.find(img => img.id === 'hero');
 
@@ -24,15 +27,34 @@ export default function LoginPage() {
     }
   }, [user, isInitialized, router]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simple mock user object. In a real app, this would involve a backend call.
-    const mockUser = {
-      uid: userId,
-      email: `${userId}@example.com`, // mock email for consistency with user type
-    };
-    manualLogin(mockUser);
-    router.push('/dashboard');
+    setIsLoggingIn(true);
+    
+    try {
+        // Simple mock user object. In a real app, this would involve a backend call.
+        const mockUser = {
+          uid: userId,
+          email: `${userId}@example.com`, // mock email for consistency with user type
+        };
+        await manualLogin(mockUser);
+
+        toast({
+          title: "Logged In Successfully!",
+          description: `Welcome back, ${userId}!`,
+          className: 'bg-green-500 text-white'
+        });
+
+        router.push('/dashboard');
+    } catch (error) {
+        console.error("Login failed:", error);
+        toast({
+            title: "Login Failed",
+            description: "An error occurred during login. Please try again.",
+            variant: "destructive"
+        });
+        setIsLoggingIn(false);
+    }
   };
   
   if (!isInitialized) {
@@ -83,8 +105,8 @@ export default function LoginPage() {
                     </div>
                 </CardContent>
                 <CardFooter>
-                    <Button type="submit" className="w-full">
-                        Login
+                    <Button type="submit" className="w-full" disabled={isLoggingIn}>
+                        {isLoggingIn ? 'Logging in...' : 'Login'}
                     </Button>
                 </CardFooter>
             </form>
