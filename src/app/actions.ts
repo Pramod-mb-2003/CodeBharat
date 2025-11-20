@@ -1,17 +1,15 @@
 'use server';
 import { analyzeInterestQuizResponses } from '@/ai/flows/analyze-interest-quiz-responses';
 import { redirect } from 'next/navigation';
-import { quizQuestions } from '@/lib/quiz-data';
 
 export async function submitQuiz(formData: FormData) {
-  const responses: { [key: string]: string } = {};
   let quizResponsesText = 'User responses:\n';
 
-  for (const question of quizQuestions) {
-    const answerCategory = formData.get(question.id) as string;
-    if (answerCategory) {
-      const selectedOption = question.options.find(opt => opt.category === answerCategory);
-      quizResponsesText += `- For question "${question.question}", user chose an option related to ${answerCategory}.\n`;
+  // Iterate over form entries
+  for (const [questionId, answerCategory] of formData.entries()) {
+    // Assuming questionId is like "q0", "q1", etc. and answerCategory is the interest key
+    if (typeof answerCategory === 'string' && answerCategory) {
+       quizResponsesText += `- For question ${parseInt(questionId.substring(1)) + 1}, user chose an option related to ${answerCategory}.\n`;
     }
   }
 
