@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -60,4 +61,39 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@layer components {
+    .goodies-grid {
+      @apply grid grid-cols-1 md:grid-cols-2 gap-4;
+    }
+
+    .goodie-card {
+      @apply flex gap-4 items-center bg-card/80 border rounded-lg p-4 transition-all duration-200;
+    }
+    
+    .goodie-card.unlocked {
+      @apply shadow-lg border-primary/50;
+      transform: translateY(-2px);
+    }
+    
+    .goodie-card.locked {
+      @apply opacity-60 grayscale;
+    }
+    
+    .goodie-icon {
+      @apply w-16 h-16 rounded-lg flex items-center justify-center text-4xl bg-accent/20;
+    }
+    
+    .goodie-name {
+      @apply font-bold text-lg text-foreground;
+    }
+    
+    .goodie-desc {
+      @apply text-sm text-muted-foreground mt-1;
+    }
+    
+    .goodie-badge {
+      @apply inline-flex items-center gap-2 px-3 py-1 rounded-full font-semibold bg-secondary text-secondary-foreground text-xs;
+    }
 }
