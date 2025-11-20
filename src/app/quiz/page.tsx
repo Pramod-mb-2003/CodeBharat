@@ -1,7 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { submitQuiz } from '@/app/actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -9,21 +8,31 @@ import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { LoaderCircle, Rocket } from 'lucide-react';
 import { useGame } from '@/context/GameContext';
-import { ALL_INTEREST_KEYS, INTERESTS } from '@/lib/constants';
+import { useToast } from '@/hooks/use-toast';
 
 export type DynamicQuizQuestion = {
   q: string;
   options: string[];
 };
 
+const CATEGORY_MAP = [
+  "sports",
+  "science",
+  "math",
+  "english",
+  "social",
+  "creativity",
+];
+
 export default function QuizPage() {
   const [questions, setQuestions] = useState<DynamicQuizQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<number, number>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const { user, isInitialized } = useGame();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (isInitialized && !user) {
@@ -49,18 +58,22 @@ export default function QuizPage() {
         }
       } catch (error) {
         console.error("Error fetching quiz questions:", error);
-        // Fallback or error handling
+        toast({
+          title: "Error",
+          description: "Could not load quiz questions. Please try again later.",
+          variant: "destructive"
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchQuestions();
-  }, []);
+  }, [toast]);
 
 
-  const handleAnswerSelect = (questionId: string, category: string) => {
-    setAnswers(prev => ({ ...prev, [questionId]: category }));
+  const handleAnswerSelect = (questionIndex: number, optionIndex: number) => {
+    setAnswers(prev => ({ ...prev, [questionIndex]: optionIndex }));
   };
 
   const handleNext = () => {
@@ -78,10 +91,42 @@ export default function QuizPage() {
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
-    const formData = new FormData(event.currentTarget);
-    await submitQuiz(formData);
-    // The server action will handle the redirect.
-    setTimeout(() => setIsSubmitting(false), 5000); 
+    
+    try {
+        const answerIndexes = questions.map((_, index) => answers[index]);
+        const res = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ answers: answerIndexes }),
+        });
+
+        if (!res.ok) {
+            throw new Error('Failed to analyze answers');
+        }
+
+        const result = await res.json();
+        
+        // The /api/analyze endpoint returns full names e.g. "Sports", "Mathematics"
+        // We need to convert them to our internal keys e.g. "sports", "math"
+        const interestKeys = result.predictedInterests.map((interestName: string) => {
+            const lowerCaseName = interestName.toLowerCase();
+            if (lowerCaseName.includes('art')) return 'creativity';
+            if (lowerCaseName.includes('social')) return 'social';
+            if (lowerCaseName.includes('math')) return 'math';
+            return lowerCaseName;
+        }).join(',');
+        
+        router.push(`/confirm-interests?interests=${interestKeys}`);
+
+    } catch(error) {
+        console.error("Error submitting quiz:", error);
+        toast({
+          title: "Analysis Failed",
+          description: "We couldn't analyze your results. Please try again.",
+          variant: "destructive"
+        });
+        setIsSubmitting(false);
+    }
   };
 
   if (!isInitialized || isLoading) {
@@ -102,7 +147,6 @@ export default function QuizPage() {
   }
 
   const currentQuestion = questions[currentQuestionIndex];
-  const questionId = `q${currentQuestionIndex}`;
   const progressPercentage = ((currentQuestionIndex + 1) / questions.length) * 100;
   
   return (
@@ -118,29 +162,27 @@ export default function QuizPage() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-8">
-              <div key={questionId} className="space-y-4">
+              <div key={currentQuestionIndex} className="space-y-4">
                 <p className="text-lg font-semibold text-center">{currentQuestionIndex + 1}. {currentQuestion.q}</p>
                 <RadioGroup
-                  name={questionId}
-                  value={answers[questionId] || ''}
-                  onValueChange={(value) => handleAnswerSelect(questionId, value)}
+                  value={answers[currentQuestionIndex]?.toString() || ''}
+                  onValueChange={(value) => handleAnswerSelect(currentQuestionIndex, parseInt(value))}
                   className="grid grid-cols-1 sm:grid-cols-2 gap-4"
                   required
                 >
                   {currentQuestion.options.map((optionText, index) => {
-                    // Assign category based on index, cycling through ALL_INTEREST_KEYS
-                    const category = ALL_INTEREST_KEYS[index % ALL_INTEREST_KEYS.length];
+                    const optionId = `${currentQuestionIndex}-${index}`;
                     return (
                         <Label
-                        key={category}
-                        htmlFor={`${questionId}-${category}`}
+                        key={optionId}
+                        htmlFor={optionId}
                         className={`flex items-center space-x-3 rounded-lg border-2 p-4 cursor-pointer transition-all ${
-                            answers[questionId] === category
+                            answers[currentQuestionIndex] === index
                             ? 'border-primary bg-primary/10 shadow-md'
                             : 'border-border hover:border-primary/50'
                         }`}
                         >
-                        <RadioGroupItem value={category} id={`${questionId}-${category}`} />
+                        <RadioGroupItem value={index.toString()} id={optionId} />
                         <span>{optionText}</span>
                         </Label>
                     );
@@ -153,11 +195,11 @@ export default function QuizPage() {
               Back
             </Button>
             {currentQuestionIndex < questions.length - 1 ? (
-              <Button type="button" onClick={handleNext} disabled={!answers[questionId]}>
+              <Button type="button" onClick={handleNext} disabled={answers[currentQuestionIndex] === undefined}>
                 Next
               </Button>
             ) : (
-              <Button type="submit" disabled={isSubmitting || !answers[questionId]}>
+              <Button type="submit" disabled={isSubmitting || answers[currentQuestionIndex] === undefined}>
                 {isSubmitting ? 'Analyzing...' : 'Finish & See Results'}
               </Button>
             )}

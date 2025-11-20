@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 const MODEL = "gemini-2.5-flash";
-const URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`;
+const URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${process.env.GEN_API_KEY}`;
 
 export async function POST(req: Request) {
   try {
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     const prompt = `
 Generate exactly 8 psychometric MCQ questions for Standard ${standard}.
 Each question must have exactly 6 options.
-Detect interest in Sports, Science, English, Creativity, Social Studies, Math.
+Detect interest in Sports, Science, Mathematics, English, Social Science, Art & Craft.
 
 Return ONLY valid JSON:
 {

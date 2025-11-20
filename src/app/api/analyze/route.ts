@@ -3,10 +3,10 @@ import { NextResponse } from "next/server";
 const CATEGORIES = [
   "Sports",
   "Science",
+  "Mathematics",
   "English",
-  "Creativity",
-  "Social Studies",
-  "Math",
+  "Social Science",
+  "Art & Craft",
 ];
 
 function scoreAnswers(answers: number[]) {
