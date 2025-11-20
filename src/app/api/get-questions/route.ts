@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 const MODEL = "gemini-2.5-flash";
-const URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${process.env.GEN_API_KEY}`;
+const URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
 export async function POST(req: Request) {
   try {
@@ -53,27 +53,39 @@ NO explanations. NO markdown. NO reasoning. NO notes. Just JSON.
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!text) {
+      if (data?.candidates?.[0]?.finishReason === 'SAFETY') {
+        return NextResponse.json(
+          { error: "Content blocked due to safety settings.", raw: data },
+          { status: 400 }
+        );
+      }
       return NextResponse.json(
         { error: "Model did not return usable JSON", raw: data },
         { status: 502 }
       );
     }
 
-    const parsed = JSON.parse(text);
-
-    if (!parsed.questions) {
-      return NextResponse.json(
-        { error: "JSON missing questions", raw: parsed },
-        { status: 500 }
-      );
+    try {
+        const parsed = JSON.parse(text);
+        if (!parsed.questions) {
+            return NextResponse.json(
+                { error: "JSON missing questions", raw: parsed },
+                { status: 500 }
+            );
+        }
+        return NextResponse.json(parsed);
+    } catch(e) {
+        console.error("Failed to parse JSON:", text);
+        return NextResponse.json(
+            { error: "Failed to parse JSON response from model", raw: text },
+            { status: 500 }
+        );
     }
-
-    return NextResponse.json(parsed);
 
   } catch (err: any) {
     console.error("ERROR:", err);
     return NextResponse.json(
-      { error: "Server failed", details: err.message },
+      { error: "Server failed", details: err.message, body: await req.text().catch(() => '') },
       { status: 500 }
     );
   }
