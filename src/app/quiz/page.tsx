@@ -9,12 +9,12 @@ import { Progress } from '@/components/ui/progress';
 import { LoaderCircle, Rocket } from 'lucide-react';
 import { useGame } from '@/context/GameContext';
 import { useToast } from '@/hooks/use-toast';
+import { staticQuestions, QuizQuestion } from '@/lib/static-quiz';
 
-// Define the shape of a question based on the new API response
-type QuizQuestion = {
-  q: string;
-  options: string[];
-};
+// Helper function to shuffle an array and take the first N items
+function getShuffledQuestions(arr: QuizQuestion[], num = 8): QuizQuestion[] {
+  return [...arr].sort(() => 0.5 - Math.random()).slice(0, num);
+}
 
 
 export default function QuizPage() {
@@ -45,7 +45,7 @@ export default function QuizPage() {
             body: JSON.stringify({ standard: '8' }),
         });
         if (!response.ok) {
-            throw new Error('Failed to fetch questions');
+            throw new Error('API request failed');
         }
         const data = await response.json();
         if (data.questions && data.questions.length > 0) {
@@ -54,12 +54,13 @@ export default function QuizPage() {
           throw new Error('No questions received from API');
         }
       } catch (error) {
-        console.error("Error fetching quiz questions:", error);
+        console.error("Error fetching quiz questions, using fallback:", error);
         toast({
-          title: "Error",
-          description: "Could not load quiz questions. Please try again later.",
-          variant: "destructive"
+          title: "Using Fallback Quiz",
+          description: "Couldn't generate dynamic questions, but we've got you covered!",
+          variant: "default"
         });
+        setQuestions(getShuffledQuestions(staticQuestions, 8));
       } finally {
         setIsLoading(false);
       }
@@ -104,6 +105,7 @@ export default function QuizPage() {
 
         const result = await response.json();
         
+        // The API returns simple names, we map them to the keys used internally
         const interestKeys = result.predictedInterests
             .map((interestName: string) => {
               const lowerCaseName = interestName.toLowerCase();
