@@ -158,10 +158,10 @@ function ConfirmInterestsContent() {
         </CardHeader>
         <CardContent>
           {!isUpdateMode && predictedInterests.length > 0 && (
-            <Alert className="mb-6 bg-accent/20 border-accent/50 text-accent-foreground">
-                <Lightbulb className="h-4 w-4" />
-                <AlertTitle>Our Suggestions For You!</AlertTitle>
-                <AlertDescription>
+            <Alert className="mb-6 bg-primary/10 border-primary/20 text-primary">
+                <Lightbulb className="h-4 w-4 text-primary" />
+                <AlertTitle className="font-bold">Our Suggestions For You!</AlertTitle>
+                <AlertDescription className="font-semibold">
                     {predictedInterests.map(key => INTERESTS[key]?.name).join(', ')}
                 </AlertDescription>
             </Alert>
