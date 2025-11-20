@@ -1,7 +1,7 @@
 
 'use client';
 import Link from 'next/link';
-import { Rocket, Award, Heart, LogOut, Trophy } from 'lucide-react';
+import { Rocket, Award, Heart, LogOut, Trophy, ListOrdered } from 'lucide-react';
 import { useGame } from '@/context/GameContext';
 import { useEffect, useState } from 'react';
 import { Button } from '../ui/button';
@@ -88,7 +88,13 @@ export function Header({ interest }: HeaderProps) {
             Interest Ignition
           </span>
         </Link>
-        <div className="flex items-center gap-4 sm:gap-6">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <Link href="/leaderboard">
+            <Button variant="outline" size="icon" title="Leaderboard">
+                <ListOrdered className="h-5 w-5" />
+                <span className="sr-only">Leaderboard</span>
+            </Button>
+          </Link>
           <Link href="/goodies">
             <Button variant="outline" size="icon" title="Goodies">
                 <Trophy className="h-5 w-5" />
