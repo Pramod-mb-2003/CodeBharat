@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { INTERESTS, ALL_INTEREST_KEYS } from '@/lib/constants';
 import { cn } from '@/lib/utils';
-import { CheckCircle, Info, LoaderCircle } from 'lucide-react';
+import { CheckCircle, Info, Lightbulb, LoaderCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useGame } from '@/context/GameContext';
@@ -16,6 +16,7 @@ function ConfirmInterestsContent() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
+  const [predictedInterests, setPredictedInterests] = useState<string[]>([]);
   const [isReady, setIsReady] = useState(false);
   const [isUpdateMode, setIsUpdateMode] = useState(false);
   const { user, isInitialized, initializeInterests, interests: existingInterests, allInterestsComplete, updateInterests } = useGame();
@@ -52,7 +53,9 @@ function ConfirmInterestsContent() {
         const interestsParam = searchParams.get('interests');
         if (interestsParam) {
           const initialInterests = interestsParam.split(',').filter(i => i && ALL_INTEREST_KEYS.includes(i));
-          setSelectedInterests(initialInterests.slice(0, 3));
+          setPredictedInterests(initialInterests);
+          // We no longer pre-select them. User must choose.
+          setSelectedInterests([]); 
         }
     }
     setIsReady(true);
@@ -129,7 +132,7 @@ function ConfirmInterestsContent() {
 
   const getCardDescription = () => {
     if (isUpdateMode) return 'You have mastered your previous interests! Select one new interest to continue your learning journey.';
-    return "Based on your quiz, we think you'll love these topics! Adjust your selection (2 or 3) and let's get started.";
+    return "Based on your quiz, we have a few suggestions. Feel free to adjust your selection (2 or 3) and let's get started!";
   }
 
   const getAlertDescription = () => {
@@ -154,6 +157,15 @@ function ConfirmInterestsContent() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {!isUpdateMode && predictedInterests.length > 0 && (
+            <Alert className="mb-6 bg-accent/20 border-accent/50 text-accent-foreground">
+                <Lightbulb className="h-4 w-4" />
+                <AlertTitle>Our Suggestions For You!</AlertTitle>
+                <AlertDescription>
+                    {predictedInterests.map(key => INTERESTS[key]?.name).join(', ')}
+                </AlertDescription>
+            </Alert>
+          )}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
             {ALL_INTEREST_KEYS.map(key => {
               const interest = INTERESTS[key];
