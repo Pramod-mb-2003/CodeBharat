@@ -45,13 +45,13 @@ function ConfirmInterestsContent() {
         }
         setSelectedInterests(existingInterests);
     } else {
-        if (existingInterests.length > 0) {
+        if (existingInterests.length > 0 && !searchParams.get('interests')) {
           router.push('/dashboard');
           return;
         }
         const interestsParam = searchParams.get('interests');
         if (interestsParam) {
-          const initialInterests = interestsParam.split(',').filter(i => ALL_INTEREST_KEYS.includes(i));
+          const initialInterests = interestsParam.split(',').filter(i => i && ALL_INTEREST_KEYS.includes(i));
           setSelectedInterests(initialInterests.slice(0, 3));
         }
     }
